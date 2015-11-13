@@ -1,0 +1,24 @@
+{
+    "name":         "sidus/encryption-bundle",
+    "description":  "The EncryptionBundle allows you to store encrypted files and data in Doctrine's entity in a very simple way",
+    "keywords":     ["encryption", "mcrypt"],
+    "type":         "symfony-bundle",
+    "license":      "MIT",
+    "authors":     [
+        {
+            "name":     "Vincent Chalnot",
+            "email":    "vincent@sidus.fr",
+            "homepage": "https://github.com/VincentChalnot"
+        }
+    ],
+    "require":      {
+        "php":                      ">=5.3.3",
+        "symfony/framework-bundle": ">=2.4",
+        "doctrine/doctrine-bundle": ">=1.2",
+        "ext-mcrypt": "*"
+    },
+    "autoload": {
+        "psr-0": { "Sidus\\EncryptionBundle": "" }
+    },
+    "target-dir": "Sidus/EncryptionBundle"
+}

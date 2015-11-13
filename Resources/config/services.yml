@@ -1,0 +1,31 @@
+parameters:
+    security.authentication.provider.dao.class: Sidus\EncryptionBundle\Authentication\AuthenticationProvider
+    sidus.encryption.manager.class: Sidus\EncryptionBundle\Security\EncryptionManager
+    sidus.encryption.subscriber.class: Sidus\EncryptionBundle\EventSubscriber\CryptableSubscriber
+
+services:
+    ##
+    # Inherit the original Dao Provider from symfony and add the encryption manager
+    # @see symfony/src/Symfony/Bundle/SecurityBundle/Resources/config/security_listeners.xml
+    ##
+    security.authentication.provider.dao:
+        class: %security.authentication.provider.dao.class%
+        arguments:
+            - ~
+            - @security.user_checker
+            - ~
+            - @security.encoder_factory
+            - "%security.authentication.hide_user_not_found%"
+        calls:
+             - [setEncryptionManager, ["@sidus.encryption.manager"]]
+
+    sidus.encryption.manager:
+        class: %sidus.encryption.manager.class%
+        arguments: [ "@session", "@doctrine", "@?debug.stopwatch" ]
+
+    sidus.encryption.subscriber:
+        class: %sidus.encryption.subscriber.class%
+        # We are forced to inject service container due to a circular reference to the security.context
+        arguments: [ "@service_container" ]
+        tags:
+            - { name: doctrine.event_subscriber, connection: default }
