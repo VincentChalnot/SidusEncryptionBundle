@@ -10,9 +10,9 @@ use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * This type of response can be used to stream and decrypt an encrypted file at the same time, preventing the file from being
- * store unencrypted on the serveur.
- * 
+ * This type of response can be used to stream and decrypt an encrypted file at the same time, preventing the file from
+ * being store unencrypted on the serveur.
+ *
  * @author Vincent Chalnot <vincent@sidus.fr>
  */
 class DecryptFileResponse extends BinaryFileResponse
@@ -31,20 +31,29 @@ class DecryptFileResponse extends BinaryFileResponse
 
     /**
      * Initialize the response with the file path and the original's file size
-     * The original file's size is very important to prevent the null character padding of the encryption function at the end of the file
-     * which can introduce a slight difference in the filesize wich will break checksums verifications
-     * 
-     * @param EncryptionManager $encryptionManager
+     * The original file's size is very important to prevent the null character padding of the encryption function at
+     * the end of the file which can introduce a slight difference in the filesize wich will break checksums
+     * verifications
+     *
+     * @param EncryptionManager  $encryptionManager
      * @param SplFileInfo|string $file
-     * @param int $fileSize
-     * @param int $status
-     * @param array $headers
-     * @param null|string $contentDisposition
-     * @param bool $autoEtag
-     * @param bool $autoLastModified
+     * @param int                $fileSize
+     * @param int                $status
+     * @param array              $headers
+     * @param null|string        $contentDisposition
+     * @param bool               $autoEtag
+     * @param bool               $autoLastModified
      */
-    public function __construct(EncryptionManager $encryptionManager, $file, $fileSize, $status = 200, $headers = array(), $contentDisposition = null, $autoEtag = false, $autoLastModified = true)
-    {
+    public function __construct(
+        EncryptionManager $encryptionManager,
+        $file,
+        $fileSize,
+        $status = 200,
+        $headers = [],
+        $contentDisposition = null,
+        $autoEtag = false,
+        $autoLastModified = true
+    ) {
         parent::__construct($file, $status, $headers, false, $contentDisposition, $autoEtag, $autoLastModified);
         $this->setPrivate();
         $this->fileSize = $fileSize;
@@ -53,6 +62,7 @@ class DecryptFileResponse extends BinaryFileResponse
 
     /**
      * @param Request $request
+     *
      * @return DecryptFileResponse
      */
     public function prepare(Request $request)
@@ -60,20 +70,23 @@ class DecryptFileResponse extends BinaryFileResponse
         parent::prepare($request);
         $this->headers->set('Content-Length', $this->fileSize);
         $this->headers->set('Content-Type', 'application/octet-stream');
+
         return $this;
     }
 
     /**
      * Sends the file using the encryption manager with the php://output internal stream
+     *
+     * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      */
     public function sendContent()
     {
         if (!$this->isSuccessful()) {
             parent::sendContent();
+
             return;
         }
 
         $this->encryptionManager->decryptFile($this->file->getPathname(), 'php://output', $this->fileSize);
     }
-
 }

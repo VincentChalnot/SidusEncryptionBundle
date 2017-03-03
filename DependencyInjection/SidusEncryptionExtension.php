@@ -16,15 +16,16 @@ class SidusEncryptionExtension extends Extension
 {
     /**
      * {@inheritdoc}
+     * @throws \Exception
      */
     public function load(array $configs, ContainerBuilder $container)
     {
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
-        
+
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services.yml');
-        
+
         if (isset($config['encryption_key']['auto_generate']) && $config['encryption_key']['auto_generate']) {
             $emDefinition = $container->getDefinition('sidus.encryption.manager');
             $emDefinition->addArgument(true);

@@ -2,6 +2,9 @@
 
 namespace Sidus\EncryptionBundle\Exception;
 
-class EmptyOwnershipIdException extends \Exception {
-    
+/**
+ * Thrown when there is no ownership id available to decrypt data
+ */
+class EmptyOwnershipIdException extends \RuntimeException
+{
 }

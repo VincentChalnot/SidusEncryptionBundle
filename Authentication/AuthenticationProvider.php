@@ -8,9 +8,9 @@ use Symfony\Component\Security\Core\Authentication\Provider\DaoAuthenticationPro
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
 /**
- * The Authentication provider will be used at connection time to decrypt the cipher key in the user and store it in session through
- * the encryption manager.
- * 
+ * The Authentication provider will be used at connection time to decrypt the cipher key in the user and store it in
+ * session through the encryption manager.
+ *
  * @author Vincent Chalnot <vincent@sidus.fr>
  */
 class AuthenticationProvider extends DaoAuthenticationProvider
@@ -20,11 +20,13 @@ class AuthenticationProvider extends DaoAuthenticationProvider
 
     /**
      * @param EncryptionManager $encryptionManager
+     *
      * @return AuthenticationProvider
      */
     public function setEncryptionManager(EncryptionManager $encryptionManager)
     {
         $this->encryptionManager = $encryptionManager;
+
         return $this;
     }
 
@@ -32,6 +34,10 @@ class AuthenticationProvider extends DaoAuthenticationProvider
      * Retrieve user with password token and use it to decrypt the cipher key in the user
      * The encryption manager will store it in the session for the following requests
      * {@inheritdoc}
+     *
+     * @throws \InvalidArgumentException
+     * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     * @throws \Sidus\EncryptionBundle\Exception\EmptyOwnershipIdException
      */
     protected function retrieveUser($username, UsernamePasswordToken $token)
     {
@@ -39,6 +45,7 @@ class AuthenticationProvider extends DaoAuthenticationProvider
         if ($user instanceof UserEncryptionProviderInterface && null !== $token->getCredentials()) {
             $this->encryptionManager->decryptCipherKey($user, $token->getCredentials());
         }
+
         return $user;
     }
 }

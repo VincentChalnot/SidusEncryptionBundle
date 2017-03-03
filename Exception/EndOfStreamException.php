@@ -2,6 +2,9 @@
 
 namespace Sidus\EncryptionBundle\Exception;
 
-class EndOfStreamException extends \Exception {
-    
+/**
+ * Can occure when the encrypted data end unexpectedly
+ */
+class EndOfStreamException extends \RuntimeException
+{
 }

@@ -17,7 +17,7 @@ services:
             - @security.encoder_factory
             - "%security.authentication.hide_user_not_found%"
         calls:
-             - [setEncryptionManager, ["@sidus.encryption.manager"]]
+             - [setEncryptionManager, ['@sidus.encryption.manager']]
 
     sidus.encryption.manager:
         class: %sidus.encryption.manager.class%
@@ -25,7 +25,9 @@ services:
 
     sidus.encryption.subscriber:
         class: %sidus.encryption.subscriber.class%
-        # We are forced to inject service container due to a circular reference to the security.context
-        arguments: [ "@service_container" ]
+        arguments:
+            - '@sidus.encryption.manager'
+            - '@doctrine'
+            - '@?logger'
         tags:
             - { name: doctrine.event_subscriber, connection: default }
