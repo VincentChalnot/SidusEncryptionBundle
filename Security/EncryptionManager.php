@@ -272,12 +272,7 @@ class EncryptionManager
         $inputStream = fopen($inputFilePath, 'rb');
         $outputStream = fopen($outputFilePath, 'wb');
 
-        $iv = $this->generateIv();
-        fwrite($outputStream, $iv, $this->getIvSize());
-
-        while (!feof($inputStream)) {
-            fwrite($outputStream, $this->encryptStreamBlock($inputStream, $iv));
-        }
+        $this->encryptStream($inputStream, $outputStream);
 
         fclose($inputStream);
         fclose($outputStream);
@@ -285,10 +280,28 @@ class EncryptionManager
     }
 
     /**
+     * @param resource $inputStream
+     * @param resource $outputStream
+     *
+     * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     */
+    public function encryptStream($inputStream, $outputStream)
+    {
+        $this->startWatch(__METHOD__);
+
+        $iv = $this->generateIv();
+        fwrite($outputStream, $iv, $this->getIvSize());
+
+        while (!feof($inputStream)) {
+            fwrite($outputStream, $this->encryptStreamBlock($inputStream, $iv));
+        }
+
+        $this->stopWatch(__METHOD__);
+    }
+
+    /**
      * Decrypt a file by streaming each block from the input to the output
-     * You can specify the original unencrypted file size in order to cut the output at the exact same location
-     * WARNING If you don't specify a fileSize parameter, your output file will be padded with \0 so it will break
-     * checksum verifications or even the file itself depending of the format.
+     * @see EncryptionManager::decryptStream WARNING !
      *
      * @param string $inputFilePath
      * @param string $outputFilePath
@@ -302,6 +315,29 @@ class EncryptionManager
         $inputStream = fopen($inputFilePath, 'rb');
         $outputStream = fopen($outputFilePath, 'wb');
 
+        $this->decryptStream($inputStream, $outputStream, $fileSize);
+
+        fclose($outputStream);
+        fclose($inputStream);
+        $this->stopWatch(__METHOD__);
+    }
+
+    /**
+     * Decrypt a stream
+     * You can specify the original unencrypted file size in order to cut the output at the exact same location
+     * WARNING If you don't specify a fileSize parameter, your output file will be padded with \0 so it will break
+     * checksum verifications or even the file itself depending of the format.
+     *
+     * @param resource $inputStream
+     * @param resource $outputStream
+     * @param int      $fileSize
+     *
+     * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     */
+    public function decryptStream($inputStream, $outputStream, $fileSize = null)
+    {
+        $this->startWatch(__METHOD__);
+
         $iv = fread($inputStream, $this->getIvSize());
 
         $outputLenght = $fileSize;
@@ -314,8 +350,6 @@ class EncryptionManager
             }
         }
 
-        fclose($outputStream);
-        fclose($inputStream);
         $this->stopWatch(__METHOD__);
     }
 
