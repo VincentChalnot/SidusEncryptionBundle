@@ -340,13 +340,13 @@ class EncryptionManager
 
         $iv = fread($inputStream, $this->getIvSize());
 
-        $outputLenght = $fileSize;
+        $outputLength = $fileSize;
         $blockSize = $this->getBlockSize();
 
         while (!feof($inputStream)) {
-            fwrite($outputStream, $this->decryptStreamBlock($inputStream, $iv), $outputLenght);
+            fwrite($outputStream, $this->decryptStreamBlock($inputStream, $iv), $outputLength);
             if ($fileSize) {
-                $outputLenght -= $blockSize;
+                $outputLength -= $blockSize;
             }
         }
 
