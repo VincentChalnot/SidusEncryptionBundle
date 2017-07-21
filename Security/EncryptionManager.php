@@ -6,6 +6,7 @@ use Sidus\EncryptionBundle\Entity\UserEncryptionProviderInterface;
 use Sidus\EncryptionBundle\Exception\EmptyCipherKeyException;
 use Sidus\EncryptionBundle\Exception\EmptyOwnershipIdException;
 use Doctrine\Bundle\DoctrineBundle\Registry;
+use Sidus\EncryptionBundle\Exception\FileHandlingException;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\Stopwatch\Stopwatch;
 
@@ -265,6 +266,7 @@ class EncryptionManager
      * @param string $outputFilePath
      *
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function encryptFile($inputFilePath, $outputFilePath)
     {
@@ -272,10 +274,16 @@ class EncryptionManager
         $inputStream = fopen($inputFilePath, 'rb');
         $outputStream = fopen($outputFilePath, 'wb');
 
+        if (!$inputStream || !$outputStream) {
+            throw new FileHandlingException('Sorry, fopen has return false');
+        }
+
         $this->encryptStream($inputStream, $outputStream);
 
-        fclose($inputStream);
-        fclose($outputStream);
+        if (!fclose($inputStream) || fclose($outputStream)) {
+            throw new FileHandlingException('Sorry, fclose has return false');
+        }
+
         $this->stopWatch(__METHOD__);
     }
 
@@ -284,16 +292,21 @@ class EncryptionManager
      * @param resource $outputStream
      *
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function encryptStream($inputStream, $outputStream)
     {
         $this->startWatch(__METHOD__);
 
         $iv = $this->generateIv();
-        fwrite($outputStream, $iv, $this->getIvSize());
+        if (!fwrite($outputStream, $iv, $this->getIvSize())) {
+            throw new FileHandlingException('Sorry, fwrite return false');
+        }
 
         while (!feof($inputStream)) {
-            fwrite($outputStream, $this->encryptStreamBlock($inputStream, $iv));
+            if (!fwrite($outputStream, $this->encryptStreamBlock($inputStream, $iv))) {
+                throw new FileHandlingException('Sorry fwrite return false during the encryption');
+            }
         }
 
         $this->stopWatch(__METHOD__);
@@ -308,6 +321,7 @@ class EncryptionManager
      * @param int    $fileSize
      *
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function decryptFile($inputFilePath, $outputFilePath, $fileSize = null)
     {
@@ -315,10 +329,16 @@ class EncryptionManager
         $inputStream = fopen($inputFilePath, 'rb');
         $outputStream = fopen($outputFilePath, 'wb');
 
+        if (!$inputStream || !$outputStream) {
+            throw new FileHandlingException('Sorry, fopen has return false');
+        }
+
         $this->decryptStream($inputStream, $outputStream, $fileSize);
 
-        fclose($outputStream);
-        fclose($inputStream);
+        if (fclose($outputStream) || !fclose($inputStream)) {
+            throw new FileHandlingException('Sorry, fclose has return false');
+        }
+
         $this->stopWatch(__METHOD__);
     }
 
@@ -333,6 +353,7 @@ class EncryptionManager
      * @param int      $fileSize
      *
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function decryptStream($inputStream, $outputStream, $fileSize = null)
     {
@@ -340,11 +361,17 @@ class EncryptionManager
 
         $iv = fread($inputStream, $this->getIvSize());
 
+        if (!$iv) {
+            throw new FileHandlingException('Sorry, fread has return false');
+        }
+
         $outputLength = $fileSize;
         $blockSize = $this->getBlockSize();
 
         while (!feof($inputStream)) {
-            fwrite($outputStream, $this->decryptStreamBlock($inputStream, $iv), $outputLength);
+            if (!fwrite($outputStream, $this->decryptStreamBlock($inputStream, $iv), $outputLength)) {
+                throw new FileHandlingException('Sorry, fwrite has return false');
+            }
             if ($fileSize) {
                 $outputLength -= $blockSize;
             }
