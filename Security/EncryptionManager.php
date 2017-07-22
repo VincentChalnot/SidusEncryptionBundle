@@ -271,17 +271,24 @@ class EncryptionManager
     public function encryptFile($inputFilePath, $outputFilePath)
     {
         $this->startWatch(__METHOD__);
-        $inputStream = fopen($inputFilePath, 'rb');
-        $outputStream = fopen($outputFilePath, 'wb');
 
-        if (!$inputStream || !$outputStream) {
-            throw new FileHandlingException('Sorry, fopen has return false');
+        $inputStream = fopen($inputFilePath, 'rb');
+        if (!$inputStream) {
+            throw new FileHandlingException("Unable to open file '{$inputFilePath}' in read mode (binary)");
+        }
+
+        $outputStream = fopen($outputFilePath, 'wb');
+        if (!$outputStream) {
+            throw new FileHandlingException("Unable to open file '{$outputFilePath}' in write mode (binary)");
         }
 
         $this->encryptStream($inputStream, $outputStream);
 
-        if (!fclose($inputStream) || fclose($outputStream)) {
-            throw new FileHandlingException('Sorry, fclose has return false');
+        if (!fclose($inputStream)) {
+            throw new FileHandlingException("Unable to close stream for file {$inputFilePath}");
+        }
+        if (!fclose($outputStream)) {
+            throw new FileHandlingException("Unable to close stream for file {$outputStream}");
         }
 
         $this->stopWatch(__METHOD__);
@@ -299,13 +306,13 @@ class EncryptionManager
         $this->startWatch(__METHOD__);
 
         $iv = $this->generateIv();
-        if (!fwrite($outputStream, $iv, $this->getIvSize())) {
-            throw new FileHandlingException('Sorry, fwrite return false');
+        if (false === fwrite($outputStream, $iv, $this->getIvSize())) {
+            throw new FileHandlingException('Unable to write to output stream');
         }
 
         while (!feof($inputStream)) {
-            if (!fwrite($outputStream, $this->encryptStreamBlock($inputStream, $iv))) {
-                throw new FileHandlingException('Sorry fwrite return false during the encryption');
+            if (false === fwrite($outputStream, $this->encryptStreamBlock($inputStream, $iv))) {
+                throw new FileHandlingException('Unable to write to output stream');
             }
         }
 
@@ -326,17 +333,24 @@ class EncryptionManager
     public function decryptFile($inputFilePath, $outputFilePath, $fileSize = null)
     {
         $this->startWatch(__METHOD__);
-        $inputStream = fopen($inputFilePath, 'rb');
-        $outputStream = fopen($outputFilePath, 'wb');
 
-        if (!$inputStream || !$outputStream) {
-            throw new FileHandlingException('Sorry, fopen has return false');
+        $inputStream = fopen($inputFilePath, 'rb');
+        if (!$inputStream) {
+            throw new FileHandlingException("Unable to open file '{$inputFilePath}' in read mode (binary)");
+        }
+
+        $outputStream = fopen($outputFilePath, 'wb');
+        if (!$outputStream) {
+            throw new FileHandlingException("Unable to open file '{$outputFilePath}' in write mode (binary)");
         }
 
         $this->decryptStream($inputStream, $outputStream, $fileSize);
 
-        if (fclose($outputStream) || !fclose($inputStream)) {
-            throw new FileHandlingException('Sorry, fclose has return false');
+        if (!fclose($inputStream)) {
+            throw new FileHandlingException("Unable to close stream for file {$inputFilePath}");
+        }
+        if (!fclose($outputStream)) {
+            throw new FileHandlingException("Unable to close stream for file {$outputStream}");
         }
 
         $this->stopWatch(__METHOD__);
@@ -361,16 +375,16 @@ class EncryptionManager
 
         $iv = fread($inputStream, $this->getIvSize());
 
-        if (!$iv) {
-            throw new FileHandlingException('Sorry, fread has return false');
+        if (false === $iv) {
+            throw new FileHandlingException('Unable to read IV from input stream');
         }
 
         $outputLength = $fileSize;
         $blockSize = $this->getBlockSize();
 
         while (!feof($inputStream)) {
-            if (!fwrite($outputStream, $this->decryptStreamBlock($inputStream, $iv), $outputLength)) {
-                throw new FileHandlingException('Sorry, fwrite has return false');
+            if (false === fwrite($outputStream, $this->decryptStreamBlock($inputStream, $iv), $outputLength)) {
+                throw new FileHandlingException('Unable to write to output stream');
             }
             if ($fileSize) {
                 $outputLength -= $blockSize;
