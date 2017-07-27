@@ -6,6 +6,7 @@ use Sidus\EncryptionBundle\Entity\UserEncryptionProviderInterface;
 use Sidus\EncryptionBundle\Exception\EmptyCipherKeyException;
 use Sidus\EncryptionBundle\Exception\EmptyOwnershipIdException;
 use Doctrine\Bundle\DoctrineBundle\Registry;
+use Sidus\EncryptionBundle\Exception\FileHandlingException;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\Stopwatch\Stopwatch;
 
@@ -265,17 +266,31 @@ class EncryptionManager
      * @param string $outputFilePath
      *
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function encryptFile($inputFilePath, $outputFilePath)
     {
         $this->startWatch(__METHOD__);
+
         $inputStream = fopen($inputFilePath, 'rb');
+        if (!$inputStream) {
+            throw new FileHandlingException("Unable to open file '{$inputFilePath}' in read mode (binary)");
+        }
+
         $outputStream = fopen($outputFilePath, 'wb');
+        if (!$outputStream) {
+            throw new FileHandlingException("Unable to open file '{$outputFilePath}' in write mode (binary)");
+        }
 
         $this->encryptStream($inputStream, $outputStream);
 
-        fclose($inputStream);
-        fclose($outputStream);
+        if (!fclose($inputStream)) {
+            throw new FileHandlingException("Unable to close stream for file {$inputFilePath}");
+        }
+        if (!fclose($outputStream)) {
+            throw new FileHandlingException("Unable to close stream for file {$outputStream}");
+        }
+
         $this->stopWatch(__METHOD__);
     }
 
@@ -284,16 +299,21 @@ class EncryptionManager
      * @param resource $outputStream
      *
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function encryptStream($inputStream, $outputStream)
     {
         $this->startWatch(__METHOD__);
 
         $iv = $this->generateIv();
-        fwrite($outputStream, $iv, $this->getIvSize());
+        if (false === fwrite($outputStream, $iv, $this->getIvSize())) {
+            throw new FileHandlingException('Unable to write to output stream');
+        }
 
         while (!feof($inputStream)) {
-            fwrite($outputStream, $this->encryptStreamBlock($inputStream, $iv));
+            if (false === fwrite($outputStream, $this->encryptStreamBlock($inputStream, $iv))) {
+                throw new FileHandlingException('Unable to write to output stream');
+            }
         }
 
         $this->stopWatch(__METHOD__);
@@ -308,17 +328,31 @@ class EncryptionManager
      * @param int    $fileSize
      *
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function decryptFile($inputFilePath, $outputFilePath, $fileSize = null)
     {
         $this->startWatch(__METHOD__);
+
         $inputStream = fopen($inputFilePath, 'rb');
+        if (!$inputStream) {
+            throw new FileHandlingException("Unable to open file '{$inputFilePath}' in read mode (binary)");
+        }
+
         $outputStream = fopen($outputFilePath, 'wb');
+        if (!$outputStream) {
+            throw new FileHandlingException("Unable to open file '{$outputFilePath}' in write mode (binary)");
+        }
 
         $this->decryptStream($inputStream, $outputStream, $fileSize);
 
-        fclose($outputStream);
-        fclose($inputStream);
+        if (!fclose($inputStream)) {
+            throw new FileHandlingException("Unable to close stream for file {$inputFilePath}");
+        }
+        if (!fclose($outputStream)) {
+            throw new FileHandlingException("Unable to close stream for file {$outputStream}");
+        }
+
         $this->stopWatch(__METHOD__);
     }
 
@@ -333,6 +367,7 @@ class EncryptionManager
      * @param int      $fileSize
      *
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function decryptStream($inputStream, $outputStream, $fileSize = null)
     {
@@ -340,11 +375,17 @@ class EncryptionManager
 
         $iv = fread($inputStream, $this->getIvSize());
 
+        if (false === $iv) {
+            throw new FileHandlingException('Unable to read IV from input stream');
+        }
+
         $outputLength = $fileSize;
         $blockSize = $this->getBlockSize();
 
         while (!feof($inputStream)) {
-            fwrite($outputStream, $this->decryptStreamBlock($inputStream, $iv), $outputLength);
+            if (false === fwrite($outputStream, $this->decryptStreamBlock($inputStream, $iv), $outputLength)) {
+                throw new FileHandlingException('Unable to write to output stream');
+            }
             if ($fileSize) {
                 $outputLength -= $blockSize;
             }
