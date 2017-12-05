@@ -69,7 +69,9 @@ class DecryptFileResponse extends BinaryFileResponse
     {
         parent::prepare($request);
         $this->headers->set('Content-Length', $this->fileSize);
-        $this->headers->set('Content-Type', 'application/octet-stream');
+        if (!$this->headers->has('Content-Type')) {
+            $this->headers->set('Content-Type', 'application/octet-stream');
+        }
 
         return $this;
     }
