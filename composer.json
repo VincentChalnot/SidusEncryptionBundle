@@ -21,7 +21,8 @@
     ],
     "require": {
         "php": ">=7.1",
-        "symfony/framework-bundle": ">=2.4",
+        "ext-openssl": "*",
+        "symfony/framework-bundle": ">=2.8",
         "doctrine/doctrine-bundle": ">=1.2"
     },
     "autoload": {
