@@ -1,4 +1,7 @@
 <?php
+/** @noinspection PhpDocMissingThrowsInspection */
+/** @noinspection PhpUnhandledExceptionInspection */
+/** @noinspection EncryptionInitializationVectorRandomnessInspection */
 
 namespace Sidus\EncryptionBundle\Security;
 
@@ -11,23 +14,24 @@ use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\Stopwatch\Stopwatch;
 
 /**
- * The encryption manager will handle the encrytion/decryption of cipher key and data in the whole application
- * The cipher key is encrypted in the user with it's password (cleartext password) which means the cipher key can only
- * be retrieved at user's login. That's why it is passed along in the session (in clear form) This way the cyperkey is
- * never stored on the server (except in php's sessions) which means that the data are safe if the database or the
+ * The encryption manager will handle the encryption/decryption of cipher key and data in the whole application
+ * The cipher key is encrypted in the user with it's password (clear-text password) which means the cipher key can only
+ * be retrieved at user's login. That's why it is passed along in the session (in clear form) This way the cypher-key is
+ * never stored on the server (except in PHP's sessions) which means that the data are safe if the database or the
  * files are stolen. For improved security you can lower PHP's session duration.
  *
  * @author Vincent Chalnot <vincent@sidus.fr>
  */
 class EncryptionManager
 {
-    protected static $cipherKeyType = MCRYPT_RIJNDAEL_256;
-    protected static $cipherKeyMode = MCRYPT_MODE_ECB;
-    protected static $cipherDataType = MCRYPT_RIJNDAEL_256;
-    protected static $cipherDataMode = MCRYPT_MODE_CBC;
+    protected static $cipherKeyType = 'aes-256-ecb';
+    protected static $cipherDataType = 'aes-256-cbc';
+    protected static $cipherKeySize = 32;
+    protected static $blockSize = 32;
+    protected static $ivSize = 16;
 
-    const SESSION_CIPHER_KEY = 'sidus.encryption.cipherkey';
-    const SESSION_OWNERSHIP_KEY = 'sidus.encryption.ownership';
+    protected const SESSION_CIPHER_KEY = 'sidus.encryption.cipherkey';
+    protected const SESSION_OWNERSHIP_KEY = 'sidus.encryption.ownership';
 
     /** @var Session */
     protected $session;
@@ -39,11 +43,10 @@ class EncryptionManager
     protected $stopwatch;
     protected $autogenerateKey;
     protected $cipherKey;
-    protected $blockSize;
     protected $encryptionOwnershipId;
 
     /**
-     * Doctrine is only used when autogenerateKey is set to true
+     * Doctrine is only used when $autogenerateKey is set to true
      *
      * @param Session   $session
      * @param Registry  $doctrine
@@ -67,14 +70,13 @@ class EncryptionManager
      *
      * @return string
      */
-    public function generateIv()
+    public function generateIv(): string
     {
-        return mcrypt_create_iv($this->getIvSize(), MCRYPT_DEV_URANDOM);
+        return random_bytes(static::$ivSize);
     }
 
     /**
-     * Decrypt the cipher key used to encrypt/decrypt entreprise data using the user's password and saves it in the
-     * session
+     * Decrypt the cipher key used to encrypt/decrypt data using the user's password and saves it in the session
      *
      * @param UserEncryptionProviderInterface $user
      * @param string                          $plainTextPassword
@@ -85,7 +87,7 @@ class EncryptionManager
      *
      * @return string
      */
-    public function decryptCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword)
+    public function decryptCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword): string
     {
         if (!trim($plainTextPassword)) {
             throw new \InvalidArgumentException('Password cannot be empty');
@@ -96,11 +98,11 @@ class EncryptionManager
             $em->persist($user);
             $em->flush();
         }
-        $cipherKey = mcrypt_decrypt(
-            $this::$cipherKeyType,
-            md5((string) $plainTextPassword),
+        $cipherKey = openssl_decrypt(
             $user->getEncryptedCipherKey(),
-            $this::$cipherKeyMode
+            static::$cipherKeyType,
+            md5((string) $plainTextPassword),
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
         );
         $this->setCipherKey($cipherKey);
         $this->setEncryptionOwnershipId($user->getEncryptionOwnershipId());
@@ -109,7 +111,7 @@ class EncryptionManager
     }
 
     /**
-     * Encrypt entreprise cipher key for a user
+     * Encrypt enterprise cipher key for a user
      * Used at user creation and password change
      * You need to persist the user after that
      *
@@ -119,17 +121,17 @@ class EncryptionManager
      * @throws EmptyCipherKeyException
      * @throws \InvalidArgumentException
      */
-    public function encryptCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword)
+    public function encryptCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword): void
     {
         if (!trim($plainTextPassword)) {
             throw new \InvalidArgumentException('Password cannot be empty');
         }
         $user->setEncryptedCipherKey(
-            mcrypt_encrypt(
-                $this::$cipherKeyType,
-                md5((string) $plainTextPassword),
+            openssl_encrypt(
                 $this->getCipherKey(),
-                $this::$cipherKeyMode
+                static::$cipherKeyType,
+                md5((string) $plainTextPassword),
+                OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING
             )
         );
     }
@@ -143,9 +145,9 @@ class EncryptionManager
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      * @throws \InvalidArgumentException
      */
-    public function createCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword)
+    public function createCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword): void
     {
-        $cipherKey = openssl_random_pseudo_bytes(mcrypt_get_key_size($this::$cipherDataType, $this::$cipherDataMode));
+        $cipherKey = random_bytes(static::$cipherKeySize);
         $this->setCipherKey($cipherKey);
         $this->encryptCipherKey($user, $plainTextPassword);
     }
@@ -156,20 +158,21 @@ class EncryptionManager
      * @param string $string
      * @param string $iv
      *
-     * @return string
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     *
+     * @return string
      */
-    public function encryptString($string, $iv = null)
+    public function encryptString($string, $iv = null): string
     {
         $this->startWatch(__METHOD__);
         if (!$iv) {
             $iv = $this->generateIv();
         }
-        $encrypted = mcrypt_encrypt(
-            $this::$cipherDataType,
-            $this->getCipherKey(),
+        $encrypted = openssl_encrypt(
             $string,
-            $this::$cipherDataMode,
+            static::$cipherDataType,
+            $this->getCipherKey(),
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
             $iv
         );
         $this->stopWatch(__METHOD__);
@@ -184,20 +187,21 @@ class EncryptionManager
      * @param string $encryptedString
      * @param string $iv
      *
-     * @return string
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     *
+     * @return string
      */
-    public function decryptString($encryptedString, $iv = null)
+    public function decryptString($encryptedString, $iv = null): string
     {
         $this->startWatch(__METHOD__);
         if (!$iv) {
             $iv = $this->parseIv($encryptedString);
         }
-        $decrypted = mcrypt_decrypt(
-            $this::$cipherDataType,
-            $this->getCipherKey(),
+        $decrypted = openssl_decrypt(
             $encryptedString,
-            $this::$cipherDataMode,
+            static::$cipherDataType,
+            $this->getCipherKey(),
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
             $iv
         );
         $this->stopWatch(__METHOD__);
@@ -211,20 +215,21 @@ class EncryptionManager
      * @param resource $inputStream
      * @param string   $iv
      *
-     * @return boolean
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     *
+     * @return string
      */
-    public function encryptStreamBlock($inputStream, $iv)
+    public function encryptStreamBlock($inputStream, $iv): string
     {
-        $block = fread($inputStream, $this->getBlockSize());
-        if ($block === false) {
+        $block = fread($inputStream, static::$blockSize);
+        if (false === $block) {
             return false;
         }
-        $encryptedBlock = mcrypt_encrypt(
-            $this::$cipherDataType,
-            $this->getCipherKey(),
+        $encryptedBlock = openssl_encrypt(
             $block,
-            $this::$cipherDataMode,
+            static::$cipherDataType,
+            $this->getCipherKey(),
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
             $iv
         );
 
@@ -239,20 +244,21 @@ class EncryptionManager
      * @param resource $inputStream
      * @param string   $iv
      *
-     * @return boolean
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
+     *
+     * @return string
      */
-    public function decryptStreamBlock($inputStream, $iv)
+    public function decryptStreamBlock($inputStream, $iv): string
     {
-        $encryptedBlock = fread($inputStream, $this->getBlockSize());
-        if ($encryptedBlock === false) {
+        $encryptedBlock = fread($inputStream, static::$blockSize);
+        if (false === $encryptedBlock) {
             return false;
         }
-        $block = mcrypt_decrypt(
-            $this::$cipherDataType,
-            $this->getCipherKey(),
+        $block = openssl_decrypt(
             $encryptedBlock,
-            $this::$cipherDataMode,
+            static::$cipherDataType,
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
+            0,
             $iv
         );
 
@@ -268,7 +274,7 @@ class EncryptionManager
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
-    public function encryptFile($inputFilePath, $outputFilePath)
+    public function encryptFile($inputFilePath, $outputFilePath): void
     {
         $this->startWatch(__METHOD__);
 
@@ -301,12 +307,12 @@ class EncryptionManager
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
-    public function encryptStream($inputStream, $outputStream)
+    public function encryptStream($inputStream, $outputStream): void
     {
         $this->startWatch(__METHOD__);
 
         $iv = $this->generateIv();
-        if (false === fwrite($outputStream, $iv, $this->getIvSize())) {
+        if (false === fwrite($outputStream, $iv, static::$ivSize)) {
             throw new FileHandlingException('Unable to write to output stream');
         }
 
@@ -321,6 +327,7 @@ class EncryptionManager
 
     /**
      * Decrypt a file by streaming each block from the input to the output
+     *
      * @see EncryptionManager::decryptStream WARNING !
      *
      * @param string $inputFilePath
@@ -330,7 +337,7 @@ class EncryptionManager
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
-    public function decryptFile($inputFilePath, $outputFilePath, $fileSize = null)
+    public function decryptFile($inputFilePath, $outputFilePath, $fileSize = null): void
     {
         $this->startWatch(__METHOD__);
 
@@ -369,18 +376,18 @@ class EncryptionManager
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
-    public function decryptStream($inputStream, $outputStream, $fileSize = null)
+    public function decryptStream($inputStream, $outputStream, $fileSize = null): void
     {
         $this->startWatch(__METHOD__);
 
-        $iv = fread($inputStream, $this->getIvSize());
+        $iv = fread($inputStream, static::$ivSize);
 
         if (false === $iv) {
             throw new FileHandlingException('Unable to read IV from input stream');
         }
 
         $outputLength = $fileSize;
-        $blockSize = $this->getBlockSize();
+        $blockSize = static::$blockSize;
 
         while (!feof($inputStream)) {
             if (false === fwrite($outputStream, $this->decryptStreamBlock($inputStream, $iv), $outputLength)) {
@@ -395,55 +402,28 @@ class EncryptionManager
     }
 
     /**
-     * Get the block size of the cipher used for data encryption/decryption
-     * 32 for RIJNDAEL 256 in CBC
-     *
-     * @return int
-     */
-    public function getBlockSize()
-    {
-        if (!$this->blockSize) {
-            /** @noinspection PhpMethodParametersCountMismatchInspection */
-            $this->blockSize = mcrypt_get_block_size($this::$cipherDataType, $this::$cipherDataMode);
-        }
-
-        return $this->blockSize;
-    }
-
-    /**
-     * Get the IV size of the cipher used for data encryption/decryption
-     * 32 for RIJNDAEL 256 in CBC
-     *
-     * @return int
-     */
-    public function getIvSize()
-    {
-        return mcrypt_get_iv_size($this::$cipherDataType, $this::$cipherDataMode);
-    }
-
-    /**
-     * Parse the IV at the begining of the input and cut it from the input
+     * Parse the IV at the beginning of the input and cut it from the input
      *
      * @param string $input
      *
      * @return string
      */
-    public function parseIv(&$input)
+    public function parseIv(&$input): string
     {
-        $iv = substr($input, 0, $this->getIvSize());
-        $input = substr($input, $this->getIvSize());
+        $iv = substr($input, 0, static::$ivSize);
+        $input = substr($input, static::$ivSize);
 
         return $iv;
     }
 
     /**
-     * Set the current cipherkey used for encryption/decryption
+     * Set the current cipher-key used for encryption/decryption
      *
      * @param string $cipherKey
      *
      * @throws EmptyCipherKeyException
      */
-    public function setCipherKey($cipherKey)
+    public function setCipherKey($cipherKey): void
     {
         if (!trim($cipherKey)) {
             throw new EmptyCipherKeyException('Trying to set an empty cipher key');
@@ -453,12 +433,13 @@ class EncryptionManager
     }
 
     /**
-     * Get the current cipherkey used for encryption/decryption
+     * Get the current cipher-key used for encryption/decryption
+     *
+     * @throws EmptyCipherKeyException
      *
      * @return string
-     * @throws EmptyCipherKeyException
      */
-    public function getCipherKey()
+    public function getCipherKey(): string
     {
         if (!$this->cipherKey) {
             $this->cipherKey = hex2bin($this->session->get(self::SESSION_CIPHER_KEY));
@@ -477,7 +458,7 @@ class EncryptionManager
      *
      * @throws EmptyOwnershipIdException
      */
-    public function setEncryptionOwnershipId($encryptionOwnershipId)
+    public function setEncryptionOwnershipId($encryptionOwnershipId): void
     {
         if (!trim($encryptionOwnershipId)) {
             throw new EmptyOwnershipIdException('Trying to set an empty ownership identifier');
@@ -489,10 +470,11 @@ class EncryptionManager
     /**
      * Returns the ownership ID loaded in session
      *
-     * @return string
      * @throws EmptyOwnershipIdException
+     *
+     * @return string
      */
-    public function getEncryptionOwnershipId()
+    public function getEncryptionOwnershipId(): string
     {
         if (!$this->encryptionOwnershipId) {
             $this->encryptionOwnershipId = hex2bin($this->session->get(self::SESSION_OWNERSHIP_KEY));
@@ -508,7 +490,7 @@ class EncryptionManager
      * @param string $name
      * @param string $category
      */
-    protected function startWatch($name, $category = null)
+    protected function startWatch($name, $category = null): void
     {
         if ($this->stopwatch) {
             $this->stopwatch->start($name, $category);
@@ -518,7 +500,7 @@ class EncryptionManager
     /**
      * @param string $name
      */
-    protected function stopWatch($name)
+    protected function stopWatch($name): void
     {
         if ($this->stopwatch) {
             $this->stopwatch->stop($name);
