@@ -12,18 +12,21 @@
             "name": "Vincent Chalnot",
             "email": "vincent@sidus.fr",
             "homepage": "https://github.com/VincentChalnot"
+        },
+        {
+            "name": "Corentin Bouix",
+            "email": "cbouix@clever-age.com",
+            "homepage": "https://github.com/corentinbouix"
         }
     ],
     "require": {
-        "php": ">=5.3.3",
+        "php": ">=7.1",
         "symfony/framework-bundle": ">=2.4",
-        "doctrine/doctrine-bundle": ">=1.2",
-        "ext-mcrypt": "*"
+        "doctrine/doctrine-bundle": ">=1.2"
     },
     "autoload": {
-        "psr-0": {
-            "Sidus\\EncryptionBundle": ""
+        "psr-4": {
+            "Sidus\\EncryptionBundle\\": ""
         }
-    },
-    "target-dir": "Sidus/EncryptionBundle"
+    }
 }
