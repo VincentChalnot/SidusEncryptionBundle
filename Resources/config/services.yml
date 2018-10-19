@@ -1,7 +1,5 @@
 parameters:
     security.authentication.provider.dao.class: Sidus\EncryptionBundle\Authentication\AuthenticationProvider
-    sidus.encryption.manager.class: Sidus\EncryptionBundle\Security\EncryptionManager
-    sidus.encryption.subscriber.class: Sidus\EncryptionBundle\EventSubscriber\CryptableSubscriber
 
 services:
     ##
@@ -9,25 +7,30 @@ services:
     # @see symfony/src/Symfony/Bundle/SecurityBundle/Resources/config/security_listeners.xml
     ##
     security.authentication.provider.dao:
-        class: %security.authentication.provider.dao.class%
+        class: Sidus\EncryptionBundle\Authentication\AuthenticationProvider
         arguments:
             - ~
-            - @security.user_checker
+            - '@security.user_checker'
             - ~
-            - @security.encoder_factory
-            - "%security.authentication.hide_user_not_found%"
+            - '@security.encoder_factory'
+            - '%security.authentication.hide_user_not_found%'
         calls:
              - [setEncryptionManager, ['@sidus.encryption.manager']]
 
+    sidus.encryption.manager.adapter:
+        class: Sidus\EncryptionBundle\Encryption\XChaChaPolySodiumEncryptionAdapter
+
     sidus.encryption.manager:
-        class: %sidus.encryption.manager.class%
-        arguments: [ "@session", "@doctrine", "@?debug.stopwatch" ]
+        class: Sidus\EncryptionBundle\Encryption\EncryptionManager
+        arguments:
+            - '@sidus.encryption.manager.adapter'
+            - '@session'
+            - '@?debug.stopwatch'
 
     sidus.encryption.subscriber:
-        class: %sidus.encryption.subscriber.class%
+        class: Sidus\EncryptionBundle\EventSubscriber\CryptableSubscriber
         arguments:
             - '@sidus.encryption.manager'
-            - '@doctrine'
             - '@?logger'
         tags:
             - { name: doctrine.event_subscriber, connection: default }

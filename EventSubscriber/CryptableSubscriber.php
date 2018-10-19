@@ -4,14 +4,12 @@ namespace Sidus\EncryptionBundle\EventSubscriber;
 
 use Sidus\EncryptionBundle\Entity\CryptableInterface;
 use Sidus\EncryptionBundle\Exception\EmptyOwnershipIdException;
-use Sidus\EncryptionBundle\Security\EncryptionManager;
-use Doctrine\Bundle\DoctrineBundle\Registry;
+use Sidus\EncryptionBundle\Encryption\EncryptionManager;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\EventSubscriber;
 use Doctrine\Common\Persistence\Event\LifecycleEventArgs;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Event\OnFlushEventArgs;
-use Doctrine\ORM\Event\PostFlushEventArgs;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 
@@ -33,33 +31,27 @@ class CryptableSubscriber implements EventSubscriber
     /** @var ArrayCollection */
     protected $alreadyDecryptedEntities;
 
-    /** @var Registry */
-    protected $doctrine;
-
     /** @var LoggerInterface */
     protected $logger;
 
     /**
      * @param EncryptionManager    $encryptionManager
-     * @param Registry             $doctrine
      * @param LoggerInterface|null $logger
      */
     public function __construct(
         EncryptionManager $encryptionManager,
-        Registry $doctrine,
         LoggerInterface $logger = null
     ) {
         $this->flushedEntities = new ArrayCollection();
         $this->alreadyDecryptedEntities = new ArrayCollection();
         $this->encryptionManager = $encryptionManager;
-        $this->doctrine = $doctrine;
         $this->logger = $logger;
     }
 
     /**
      * @return array
      */
-    public function getSubscribedEvents()
+    public function getSubscribedEvents(): array
     {
         return [
             'onFlush',
@@ -79,7 +71,7 @@ class CryptableSubscriber implements EventSubscriber
      * @throws \InvalidArgumentException
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      */
-    public function postLoad(LifecycleEventArgs $event)
+    public function postLoad(LifecycleEventArgs $event): void
     {
         $entity = $event->getObject();
         if (!$entity instanceof CryptableInterface) {
@@ -100,7 +92,7 @@ class CryptableSubscriber implements EventSubscriber
      * @throws \Symfony\Component\PropertyAccess\Exception\InvalidArgumentException
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      */
-    public function onFlush(OnFlushEventArgs $eventArgs)
+    public function onFlush(OnFlushEventArgs $eventArgs): void
     {
         $em = $eventArgs->getEntityManager();
         $uow = $em->getUnitOfWork();
@@ -119,15 +111,13 @@ class CryptableSubscriber implements EventSubscriber
     /**
      * Restore all flushed entities to their decrypted state
      *
-     * @param PostFlushEventArgs $eventArgs
-     *
      * @throws \Symfony\Component\PropertyAccess\Exception\UnexpectedTypeException
      * @throws \Symfony\Component\PropertyAccess\Exception\AccessException
      * @throws \Symfony\Component\PropertyAccess\Exception\InvalidArgumentException
      * @throws \InvalidArgumentException
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      */
-    public function postFlush(PostFlushEventArgs $eventArgs)
+    public function postFlush(): void
     {
         foreach ($this->flushedEntities as $entity) {
             $this->decryptEntity($entity);
@@ -144,7 +134,7 @@ class CryptableSubscriber implements EventSubscriber
      * @throws \InvalidArgumentException
      * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      */
-    protected function decryptEntity(CryptableInterface $entity)
+    protected function decryptEntity(CryptableInterface $entity): void
     {
         if (false === $entity->getIsEncrypted()) {
             $this->alreadyDecryptedEntities->add($entity);
@@ -185,11 +175,11 @@ class CryptableSubscriber implements EventSubscriber
      * @throws \Symfony\Component\PropertyAccess\Exception\UnexpectedTypeException
      * @throws \InvalidArgumentException
      * @throws \Doctrine\ORM\ORMInvalidArgumentException
+     * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      *
      * @return bool
-     * @throws \Sidus\EncryptionBundle\Exception\EmptyCipherKeyException
      */
-    protected function cryptEntity(CryptableInterface $entity, EntityManager $em)
+    protected function cryptEntity(CryptableInterface $entity, EntityManager $em): bool
     {
         if (true === $entity->getIsEncrypted()) {
             $this->logError('Entity already encrypted', $entity);
@@ -209,34 +199,21 @@ class CryptableSubscriber implements EventSubscriber
             return false;
         }
         $uow = $em->getUnitOfWork();
-        $cs = $uow->getEntityChangeSet($entity);
         $hasChanges = false;
         $propertyAccessor = PropertyAccess::createPropertyAccessor();
         foreach ($entity->getEncryptedProperties() as $property) {
-            $iv = null;
-            // If Entity was already decrypted, we need to encrypt all properties even if there is no change
-            if (!$this->alreadyDecryptedEntities->contains($entity)) {
-                if (!array_key_exists($property, $cs)) {
-                    continue;
-                }
-                $oldValue = $cs[$property][0];
-                if ($oldValue) { // If existing iv, use this one
-                    $iv = $this->encryptionManager->parseIv($oldValue);
-                    if (strlen($iv) !== $this->encryptionManager->getIvSize()) {
-                        $iv = null;
-                    }
-                }
+            $value = $propertyAccessor->getValue($entity, $property);
+            if (null === $value) {
+                continue;
             }
-            $newEncryptedValue = $this->encryptionManager->encryptString(
-                $propertyAccessor->getValue($entity, $property),
-                $iv
-            );
+            // If Entity was already decrypted, we need to encrypt all properties even if there is no change
+            $newEncryptedValue = $this->encryptionManager->encryptString($value);
             $propertyAccessor->setValue($entity, $property, base64_encode($newEncryptedValue));
             $hasChanges = true;
         }
         $entity->setIsEncrypted(true);
         if ($hasChanges) {
-            $class = $em->getClassMetadata(get_class($entity));
+            $class = $em->getClassMetadata(\get_class($entity));
             $uow->recomputeSingleEntityChangeSet($class, $entity);
         }
         $this->flushedEntities->add($entity);
@@ -251,7 +228,7 @@ class CryptableSubscriber implements EventSubscriber
      *
      * @throws \InvalidArgumentException
      */
-    protected function logError($message, CryptableInterface $entity = null, \Exception $e = null)
+    protected function logError($message, CryptableInterface $entity = null, \Exception $e = null): void
     {
         if (!$this->logger) {
             return;
@@ -266,10 +243,9 @@ class CryptableSubscriber implements EventSubscriber
             ];
         }
         if ($entity) {
-            $meta = $this->doctrine->getManager()->getClassMetadata(get_class($entity));
             $context['entity'] = [
-                'class' => get_class($entity),
-                'identifier' => $meta->getIdentifierValues($entity),
+                'class' => \get_class($entity),
+                'identifier' => $entity->getIdentifier(),
                 'encrypted' => $entity->getIsEncrypted(),
                 'encryptionOwnershipId' => $entity->getEncryptionOwnershipId(),
                 'encryptedProperties' => $entity->getEncryptedProperties(),

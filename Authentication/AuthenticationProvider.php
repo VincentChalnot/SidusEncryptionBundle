@@ -3,7 +3,7 @@
 namespace Sidus\EncryptionBundle\Authentication;
 
 use Sidus\EncryptionBundle\Entity\UserEncryptionProviderInterface;
-use Sidus\EncryptionBundle\Security\EncryptionManager;
+use Sidus\EncryptionBundle\Encryption\EncryptionManager;
 use Symfony\Component\Security\Core\Authentication\Provider\DaoAuthenticationProvider;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
@@ -20,14 +20,10 @@ class AuthenticationProvider extends DaoAuthenticationProvider
 
     /**
      * @param EncryptionManager $encryptionManager
-     *
-     * @return AuthenticationProvider
      */
-    public function setEncryptionManager(EncryptionManager $encryptionManager)
+    public function setEncryptionManager(EncryptionManager $encryptionManager): void
     {
         $this->encryptionManager = $encryptionManager;
-
-        return $this;
     }
 
     /**

@@ -22,9 +22,14 @@
     "require": {
         "php": ">=7.2",
         "ext-mbstring": "*",
-        "paragonie/halite": ">=4.3",
         "symfony/framework-bundle": ">=2.8",
         "doctrine/doctrine-bundle": ">=1.2"
+    },
+    "suggest": {
+        "ext-sodium": "The Sodium library is native in PHP 7.2",
+        "ext-mcrypt": "Don't use this except for backward compatibility purpose",
+        "paragonie/sodium_compat": "Use this for a Sodium polyfill",
+        "phpseclib/mcrypt_compat": "If you need backward compatibility but don't want to compile the extension"
     },
     "autoload": {
         "psr-4": {

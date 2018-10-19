@@ -15,23 +15,21 @@ interface CryptableInterface
      *
      * @return array
      */
-    public function getEncryptedProperties();
+    public function getEncryptedProperties(): array;
 
     /**
      * Returns if entity is encrypted
      *
      * @return bool
      */
-    public function getIsEncrypted();
+    public function getIsEncrypted(): bool;
 
     /**
      * Set the encryption state of the entity
      *
      * @param bool $bool
-     *
-     * @return CryptableInterface
      */
-    public function setIsEncrypted($bool);
+    public function setIsEncrypted($bool): void;
 
     /**
      * Identifies a cipher key to encrypt/decrypt only related entities
@@ -45,5 +43,10 @@ interface CryptableInterface
      *
      * @param string|int $ownershipId
      */
-    public function setEncryptionOwnershipId($ownershipId);
+    public function setEncryptionOwnershipId($ownershipId): void;
+
+    /**
+     * @return string|int
+     */
+    public function getIdentifier();
 }

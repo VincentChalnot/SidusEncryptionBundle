@@ -19,12 +19,12 @@ interface UserEncryptionProviderInterface extends UserInterface
      *
      * @return string $encryptedCipherKey
      */
-    public function getEncryptedCipherKey();
+    public function getEncryptedCipherKey(): string;
 
     /**
      * @param string $encryptedCipherKey
      */
-    public function setEncryptedCipherKey($encryptedCipherKey);
+    public function setEncryptedCipherKey($encryptedCipherKey): void;
 
     /**
      * Identifies a cipher key to encrypt/decrypt only related entities

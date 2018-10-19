@@ -3,15 +3,14 @@
 namespace Sidus\EncryptionBundle\HttpFoundation;
 
 use Sidus\EncryptionBundle\Entity\UserEncryptionProviderInterface;
-use Sidus\EncryptionBundle\Security\EncryptionManager;
+use Sidus\EncryptionBundle\Encryption\EncryptionManager;
 use SplFileInfo;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
  * This type of response can be used to stream and decrypt an encrypted file at the same time, preventing the file from
- * being store unencrypted on the serveur.
+ * being store unencrypted on the server.
  *
  * @author Vincent Chalnot <vincent@sidus.fr>
  */
@@ -26,13 +25,10 @@ class DecryptFileResponse extends BinaryFileResponse
     /** @var UserEncryptionProviderInterface */
     protected $user;
 
-    /** @var File */
-    protected $file;
-
     /**
      * Initialize the response with the file path and the original's file size
      * The original file's size is very important to prevent the null character padding of the encryption function at
-     * the end of the file which can introduce a slight difference in the filesize wich will break checksums
+     * the end of the file which can introduce a slight difference in the file size which will break checksum
      * verifications
      *
      * @param EncryptionManager  $encryptionManager
@@ -65,7 +61,7 @@ class DecryptFileResponse extends BinaryFileResponse
      *
      * @return DecryptFileResponse
      */
-    public function prepare(Request $request)
+    public function prepare(Request $request): DecryptFileResponse
     {
         parent::prepare($request);
         $this->headers->set('Content-Length', $this->fileSize);
