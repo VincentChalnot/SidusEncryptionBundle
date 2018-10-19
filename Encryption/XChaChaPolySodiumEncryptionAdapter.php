@@ -21,7 +21,7 @@ class XChaChaPolySodiumEncryptionAdapter extends AbstractEncryptionAdapter
         $this->keySize = SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES; // 32
         $this->nonceSize = SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES; // 24
         $this->clearTextBlockSize = $blockSize;
-        $this->encryptedBlockSize = $blockSize + CRYPTO_AEAD_CHACHA20POLY1305_ABYTES; // 128-bit authentication tag
+        $this->encryptedBlockSize = $blockSize + SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES; // 128-bit authentication tag
     }
 
     /**
