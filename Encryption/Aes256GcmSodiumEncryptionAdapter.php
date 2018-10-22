@@ -1,4 +1,12 @@
 <?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Sidus\EncryptionBundle\Encryption;
 
@@ -6,6 +14,8 @@ use Sidus\EncryptionBundle\Exception\EncryptionException;
 
 /**
  * Sodium implementation of AES-256-GCM encryption scheme, ONLY ON SUPPORTED HARDWARE
+ *
+ * @author Vincent Chalnot <vincent@sidus.fr>
  */
 class Aes256GcmSodiumEncryptionAdapter extends AbstractEncryptionAdapter
 {
@@ -29,18 +39,27 @@ class Aes256GcmSodiumEncryptionAdapter extends AbstractEncryptionAdapter
     /**
      * {@inheritdoc}
      */
+    public static function getCode(): string
+    {
+        return 'sodium.aes-256-gcm';
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function encrypt(string $clearTextMessage, string $nonce, string $key): string
     {
-        try {
-            return sodium_crypto_aead_aes256gcm_encrypt(
-                $clearTextMessage,
-                $nonce,
-                $nonce,
-                $key
-            );
-        } catch (\SodiumException $e) {
-            throw new EncryptionException('Unable to encrypt message', 0, $e);
+        $encryptedMessage = sodium_crypto_aead_aes256gcm_encrypt(
+            $clearTextMessage,
+            $nonce,
+            $nonce,
+            $key
+        );
+        if (false === $encryptedMessage) {
+            throw new EncryptionException('Unable to encrypt message');
         }
+
+        return $encryptedMessage;
     }
 
     /**

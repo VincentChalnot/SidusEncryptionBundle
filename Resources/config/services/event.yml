@@ -1,0 +1,10 @@
+services:
+    Sidus\EncryptionBundle\EventSubscriber\CryptableSubscriber:
+        class: Sidus\EncryptionBundle\EventSubscriber\CryptableSubscriber
+        public: false
+        arguments:
+            - '@Sidus\EncryptionBundle\Session\CipherKeyStorageInterface'
+            - '@Sidus\EncryptionBundle\Registry\EncryptionManagerRegistry'
+            - '@?logger'
+        tags:
+            - { name: doctrine.event_subscriber, connection: default }

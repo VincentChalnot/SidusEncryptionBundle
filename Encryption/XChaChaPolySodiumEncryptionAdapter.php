@@ -1,12 +1,21 @@
 <?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Sidus\EncryptionBundle\Encryption;
 
 use Sidus\EncryptionBundle\Exception\EncryptionException;
-use const Sodium\CRYPTO_AEAD_CHACHA20POLY1305_ABYTES;
 
 /**
  * Sodium implementation of XChaChaPoly1305 encryption scheme, IETF version
+ *
+ * @author Vincent Chalnot <vincent@sidus.fr>
  */
 class XChaChaPolySodiumEncryptionAdapter extends AbstractEncryptionAdapter
 {
@@ -27,18 +36,27 @@ class XChaChaPolySodiumEncryptionAdapter extends AbstractEncryptionAdapter
     /**
      * {@inheritdoc}
      */
+    public static function getCode(): string
+    {
+        return 'sodium.xchacha20-poly1305-ietf';
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function encrypt(string $clearTextMessage, string $nonce, string $key): string
     {
-        try {
-            return sodium_crypto_aead_xchacha20poly1305_ietf_encrypt(
-                $clearTextMessage,
-                $nonce,
-                $nonce,
-                $key
-            );
-        } catch (\SodiumException $e) {
-            throw new EncryptionException('Unable to encrypt message', 0, $e);
+        $encryptedMessage = sodium_crypto_aead_xchacha20poly1305_ietf_encrypt(
+            $clearTextMessage,
+            $nonce,
+            $nonce,
+            $key
+        );
+        if (false === $encryptedMessage) {
+            throw new EncryptionException('Unable to encrypt message');
         }
+
+        return $encryptedMessage;
     }
 
     /**

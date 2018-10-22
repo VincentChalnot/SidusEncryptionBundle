@@ -1,4 +1,12 @@
 <?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Sidus\EncryptionBundle\Entity;
 
@@ -13,6 +21,14 @@ use Symfony\Component\Security\Core\User\UserInterface;
 interface UserEncryptionProviderInterface extends UserInterface
 {
     /**
+     * Must return the adapter code needed to decrypt the cipher key of this user, this can either be a constant or be
+     * variable for each user
+     *
+     * @return string
+     */
+    public function getEncryptionAdapterCode(): string;
+
+    /**
      * Must returns an encoded encrypted cipher key (encrypted by the plaintext password)
      * This value MUST be persisted to the database
      * It is strongly recommended to store this value as a base64 encoded string as it is a binary variable
@@ -24,7 +40,7 @@ interface UserEncryptionProviderInterface extends UserInterface
     /**
      * @param string $encryptedCipherKey
      */
-    public function setEncryptedCipherKey($encryptedCipherKey): void;
+    public function setEncryptedCipherKey(string $encryptedCipherKey): void;
 
     /**
      * Identifies a cipher key to encrypt/decrypt only related entities

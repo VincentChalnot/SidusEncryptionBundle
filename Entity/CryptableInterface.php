@@ -1,4 +1,12 @@
 <?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Sidus\EncryptionBundle\Entity;
 
@@ -10,6 +18,14 @@ namespace Sidus\EncryptionBundle\Entity;
  */
 interface CryptableInterface
 {
+    /**
+     * Must return the adapter code needed to decrypt this entity, this can either be a constant or be variable for each
+     * entity
+     *
+     * @return string
+     */
+    public function getEncryptionAdapterCode(): string;
+
     /**
      * Returns an array of property names
      *

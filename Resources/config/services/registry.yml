@@ -1,0 +1,6 @@
+services:
+    Sidus\EncryptionBundle\Registry\EncryptionManagerRegistry:
+        class: Sidus\EncryptionBundle\Registry\EncryptionManagerRegistry
+        public: false
+        arguments:
+            - ~

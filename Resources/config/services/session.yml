@@ -1,0 +1,6 @@
+services:
+    Sidus\EncryptionBundle\Session\CipherKeyStorageInterface:
+        class: Sidus\EncryptionBundle\Session\CipherKeyStorage
+        public: false
+        arguments:
+            - '@session'

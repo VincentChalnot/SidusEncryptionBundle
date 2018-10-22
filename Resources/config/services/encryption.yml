@@ -1,0 +1,18 @@
+services:
+    Sidus\EncryptionBundle\Encryption\XChaChaPolySodiumEncryptionAdapter:
+        class: Sidus\EncryptionBundle\Encryption\XChaChaPolySodiumEncryptionAdapter
+        public: false
+        tags:
+            - { name: sidus.encryption.adapter }
+
+    Sidus\EncryptionBundle\Encryption\Aes256GcmSodiumEncryptionAdapter:
+        class: Sidus\EncryptionBundle\Encryption\Aes256GcmSodiumEncryptionAdapter
+        public: false
+        tags:
+            - { name: sidus.encryption.adapter }
+
+    Sidus\EncryptionBundle\Encryption\Rijndael256MCryptEncryptionAdapter:
+        class: Sidus\EncryptionBundle\Encryption\Rijndael256MCryptEncryptionAdapter
+        public: false
+        tags:
+            - { name: sidus.encryption.adapter }

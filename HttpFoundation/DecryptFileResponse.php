@@ -1,9 +1,17 @@
 <?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Sidus\EncryptionBundle\HttpFoundation;
 
 use Sidus\EncryptionBundle\Entity\UserEncryptionProviderInterface;
-use Sidus\EncryptionBundle\Encryption\EncryptionManager;
+use Sidus\EncryptionBundle\Manager\EncryptionManagerInterface;
 use SplFileInfo;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,7 +27,7 @@ class DecryptFileResponse extends BinaryFileResponse
     /** @var int */
     protected $fileSize;
 
-    /** @var EncryptionManager */
+    /** @var EncryptionManagerInterface */
     protected $encryptionManager;
 
     /** @var UserEncryptionProviderInterface */
@@ -31,7 +39,7 @@ class DecryptFileResponse extends BinaryFileResponse
      * the end of the file which can introduce a slight difference in the file size which will break checksum
      * verifications
      *
-     * @param EncryptionManager  $encryptionManager
+     * @param EncryptionManagerInterface  $encryptionManager
      * @param SplFileInfo|string $file
      * @param int                $fileSize
      * @param int                $status
@@ -41,7 +49,7 @@ class DecryptFileResponse extends BinaryFileResponse
      * @param bool               $autoLastModified
      */
     public function __construct(
-        EncryptionManager $encryptionManager,
+        EncryptionManagerInterface $encryptionManager,
         $file,
         $fileSize,
         $status = 200,

@@ -1,62 +1,65 @@
 <?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
-namespace Sidus\EncryptionBundle\Encryption;
+namespace Sidus\EncryptionBundle\Manager;
 
+use Sidus\EncryptionBundle\Encryption\EncryptionAdapterInterface;
 use Sidus\EncryptionBundle\Entity\UserEncryptionProviderInterface;
 use Sidus\EncryptionBundle\Exception\EmptyCipherKeyException;
-use Sidus\EncryptionBundle\Exception\EmptyOwnershipIdException;
 use Sidus\EncryptionBundle\Exception\EncryptionException;
 use Sidus\EncryptionBundle\Exception\FileHandlingException;
-use Symfony\Component\HttpFoundation\Session\Session;
+use Sidus\EncryptionBundle\Session\CipherKeyStorageInterface;
 use Symfony\Component\Stopwatch\Stopwatch;
 
 /**
  * {@inheritdoc}
  *
  * @author Vincent Chalnot <vincent@sidus.fr>
+ * @author Corentin Bouix <cbouix@clever-age.com>
  */
 class EncryptionManager implements EncryptionManagerInterface
 {
-    protected const SESSION_CIPHER_KEY = 'sidus.encryption.cipherkey';
-    protected const SESSION_OWNERSHIP_KEY = 'sidus.encryption.ownership';
-
     /** @var EncryptionAdapterInterface */
     protected $encryptionAdapter;
 
-    /** @var Session */
-    protected $session;
+    /** @var CipherKeyStorageInterface */
+    protected $cipherKeyStorage;
 
     /** @var Stopwatch|null */
     protected $stopwatch;
 
-    /** @var string */
-    protected $cipherKey;
-
-    /** @var mixed */
-    protected $encryptionOwnershipId;
-
     /**
-     * Doctrine is only used when $autogenerateKey is set to true
-     *
      * @param EncryptionAdapterInterface $encryptionAdapter
-     * @param Session                    $session
+     * @param CipherKeyStorageInterface  $cipherKeyStorage
      * @param Stopwatch|null             $stopwatch
      */
     public function __construct(
         EncryptionAdapterInterface $encryptionAdapter,
-        Session $session,
+        CipherKeyStorageInterface $cipherKeyStorage,
         Stopwatch $stopwatch = null
     ) {
         $this->encryptionAdapter = $encryptionAdapter;
-        $this->session = $session;
+        $this->cipherKeyStorage = $cipherKeyStorage;
         $this->stopwatch = $stopwatch;
     }
 
     /**
-     * Decrypt the cipher key used to encrypt/decrypt data using the user's password and saves it in the session
-     *
-     * @param UserEncryptionProviderInterface $user
-     * @param string                          $plainTextPassword
+     * {@inheritdoc}
+     */
+    public function getEncryptionAdapter(): EncryptionAdapterInterface
+    {
+        return $this->encryptionAdapter;
+    }
+
+    /**
+     * {@inheritdoc}
      */
     public function decryptCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword): void
     {
@@ -67,54 +70,41 @@ class EncryptionManager implements EncryptionManagerInterface
         if (!$encryptedCipherKey) {
             throw new EmptyCipherKeyException('Empty encrypted cipher key');
         }
-        $nonce = $this->encryptionAdapter->parseNonce($encryptedCipherKey);
-        $cipherKey = $this->encryptionAdapter->decrypt($encryptedCipherKey, $nonce, md5((string) $plainTextPassword));
-        $this->setCipherKey($cipherKey);
-        $this->setEncryptionOwnershipId($user->getEncryptionOwnershipId());
+        $cipherKey = $this->encryptionAdapter->decryptCipherKey(
+            $encryptedCipherKey,
+            md5((string) $plainTextPassword)
+        );
+        $this->cipherKeyStorage->setCipherKey($cipherKey);
+        $this->cipherKeyStorage->setEncryptionOwnershipId($user->getEncryptionOwnershipId());
     }
 
     /**
-     * Encrypt enterprise cipher key for a user
-     * Used at user creation and password change
-     * You need to persist the user after that
-     *
-     * @param UserEncryptionProviderInterface $user
-     * @param string                          $plainTextPassword
+     * {@inheritdoc}
      */
     public function encryptCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword): void
     {
         if (!trim($plainTextPassword)) {
             throw new \InvalidArgumentException('Password cannot be empty');
         }
-        $nonce = $this->encryptionAdapter->generateNonce();
-        $encrypted = $this->encryptionAdapter->encrypt($this->getCipherKey(), $nonce, md5((string) $plainTextPassword));
+        $encrypted = $this->encryptionAdapter->encryptCipherKey(
+            $this->cipherKeyStorage->getCipherKey(),
+            md5((string) $plainTextPassword)
+        );
 
-        $user->setEncryptedCipherKey($nonce.$encrypted);
+        $user->setEncryptedCipherKey($encrypted);
     }
 
     /**
-     * Create a new cipher key for a user
-     *
-     * @param UserEncryptionProviderInterface $user
-     * @param string                          $plainTextPassword
-     *
-     * @throws EmptyCipherKeyException
+     * {@inheritdoc}
      */
     public function createCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword): void
     {
-        $this->setCipherKey($this->encryptionAdapter->generateKey());
+        $this->cipherKeyStorage->setCipherKey($this->encryptionAdapter->generateKey());
         $this->encryptCipherKey($user, $plainTextPassword);
     }
 
     /**
-     * Encrypt a string and automatically generate the nonce if needed
-     *
-     * @param string $string
-     * @param string $nonce
-     *
-     * @throws EmptyCipherKeyException
-     *
-     * @return string
+     * {@inheritdoc}
      */
     public function encryptString(string $string, string $nonce = null): string
     {
@@ -122,22 +112,14 @@ class EncryptionManager implements EncryptionManagerInterface
         if (null === $nonce) {
             $nonce = $this->encryptionAdapter->generateNonce();
         }
-        $encrypted = $this->encryptionAdapter->encrypt($string, $nonce, $this->getCipherKey());
+        $encrypted = $this->encryptionAdapter->encrypt($string, $nonce, $this->cipherKeyStorage->getCipherKey());
         $this->stopWatch(__METHOD__);
 
         return $nonce.$encrypted;
     }
 
     /**
-     * Decrypt an encrypted string, try to parse the nonce if not specified
-     * Absolutely NOT safe for binary data
-     *
-     * @param string $encryptedString
-     * @param string $nonce
-     *
-     * @throws EmptyCipherKeyException
-     *
-     * @return string
+     * {@inheritdoc}
      */
     public function decryptString(string $encryptedString, string $nonce = null): string
     {
@@ -145,21 +127,18 @@ class EncryptionManager implements EncryptionManagerInterface
         if (null === $nonce) {
             $nonce = $this->encryptionAdapter->parseNonce($encryptedString);
         }
-        $decrypted = $this->encryptionAdapter->decrypt($encryptedString, $nonce, $this->getCipherKey());
+        $decrypted = $this->encryptionAdapter->decrypt(
+            $encryptedString,
+            $nonce,
+            $this->cipherKeyStorage->getCipherKey()
+        );
         $this->stopWatch(__METHOD__);
 
         return $decrypted;
     }
 
     /**
-     * Encrypt a block of data from the input stream
-     *
-     * @param resource $inputStream
-     * @param string   $nonce
-     *
-     * @throws EmptyCipherKeyException
-     *
-     * @return string
+     * {@inheritdoc}
      */
     public function encryptStreamBlock($inputStream, string $nonce): string
     {
@@ -168,18 +147,11 @@ class EncryptionManager implements EncryptionManagerInterface
             throw new EncryptionException('Unable to read from clear-text stream');
         }
 
-        return $this->encryptionAdapter->encrypt($block, $nonce, $this->getCipherKey());
+        return $this->encryptionAdapter->encrypt($block, $nonce, $this->cipherKeyStorage->getCipherKey());
     }
 
     /**
-     * Decrypt a block of the input stream
-     *
-     * @param resource $inputStream
-     * @param string   $nonce
-     *
-     * @throws EmptyCipherKeyException
-     *
-     * @return string
+     * {@inheritdoc}
      */
     public function decryptStreamBlock($inputStream, string $nonce): string
     {
@@ -188,17 +160,11 @@ class EncryptionManager implements EncryptionManagerInterface
             throw new EncryptionException('Unable to read from encrypted stream');
         }
 
-        return $this->encryptionAdapter->decrypt($encryptedBlock, $nonce, $this->getCipherKey());
+        return $this->encryptionAdapter->decrypt($encryptedBlock, $nonce, $this->cipherKeyStorage->getCipherKey());
     }
 
     /**
-     * Encrypt a whole file by streaming each block from the input file to the output
-     *
-     * @param string $inputFilePath
-     * @param string $outputFilePath
-     *
-     * @throws EmptyCipherKeyException
-     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
+     * {@inheritdoc}
      */
     public function encryptFile(string $inputFilePath, string $outputFilePath): void
     {
@@ -227,14 +193,7 @@ class EncryptionManager implements EncryptionManagerInterface
     }
 
     /**
-     * Decrypt a file by streaming each block from the input to the output
-     *
-     * @param string $inputFilePath
-     * @param string $outputFilePath
-     * @param int    $fileSize
-     *
-     * @throws EmptyCipherKeyException
-     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
+     * {@inheritdoc}
      */
     public function decryptFile(string $inputFilePath, string $outputFilePath, int $fileSize = null): void
     {
@@ -263,11 +222,7 @@ class EncryptionManager implements EncryptionManagerInterface
     }
 
     /**
-     * @param resource $inputStream
-     * @param resource $outputStream
-     *
-     * @throws EmptyCipherKeyException
-     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
+     * {@inheritdoc}
      */
     public function encryptStream($inputStream, $outputStream): void
     {
@@ -289,15 +244,7 @@ class EncryptionManager implements EncryptionManagerInterface
     }
 
     /**
-     * Decrypt a stream
-     * You can specify the original unencrypted file size in order to cut the output at the exact same location
-     *
-     * @param resource $inputStream
-     * @param resource $outputStream
-     * @param int      $fileSize
-     *
-     * @throws EmptyCipherKeyException
-     * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
+     * {@inheritdoc}
      */
     public function decryptStream($inputStream, $outputStream, int $fileSize = null): void
     {
@@ -325,86 +272,6 @@ class EncryptionManager implements EncryptionManagerInterface
         }
 
         $this->stopWatch(__METHOD__);
-    }
-
-    /**
-     * Set the current cipher-key used for encryption/decryption
-     *
-     * @param string $cipherKey
-     *
-     * @throws EmptyCipherKeyException
-     */
-    public function setCipherKey(string $cipherKey): void
-    {
-        if (!trim($cipherKey)) {
-            throw new EmptyCipherKeyException('Trying to set an empty cipher key');
-        }
-        $this->cipherKey = $cipherKey;
-        $this->session->set(self::SESSION_CIPHER_KEY, bin2hex($cipherKey));
-    }
-
-    /**
-     * Get the current cipher-key used for encryption/decryption
-     *
-     * @throws EmptyCipherKeyException
-     *
-     * @return string
-     */
-    public function getCipherKey(): string
-    {
-        if (!$this->cipherKey) {
-            $this->cipherKey = hex2bin($this->session->get(self::SESSION_CIPHER_KEY));
-        }
-        if (!trim($this->cipherKey)) {
-            throw new EmptyCipherKeyException('Empty cipher key');
-        }
-
-        return $this->cipherKey;
-    }
-
-    /**
-     * Set the ownership ID in session
-     *
-     * @param mixed $encryptionOwnershipId
-     *
-     * @throws EmptyOwnershipIdException
-     */
-    public function setEncryptionOwnershipId($encryptionOwnershipId): void
-    {
-        if (!trim($encryptionOwnershipId)) {
-            throw new EmptyOwnershipIdException('Trying to set an empty ownership identifier');
-        }
-        $this->encryptionOwnershipId = $encryptionOwnershipId;
-        $this->session->set(self::SESSION_OWNERSHIP_KEY, bin2hex($encryptionOwnershipId));
-    }
-
-    /**
-     * Returns the ownership ID loaded in session
-     *
-     * @throws EmptyOwnershipIdException
-     *
-     * @return mixed
-     */
-    public function getEncryptionOwnershipId(): string
-    {
-        if (!$this->encryptionOwnershipId) {
-            $this->encryptionOwnershipId = hex2bin($this->session->get(self::SESSION_OWNERSHIP_KEY));
-        }
-        if (!trim($this->encryptionOwnershipId)) {
-            throw new EmptyOwnershipIdException('Empty ownership identifier');
-        }
-
-        return $this->encryptionOwnershipId;
-    }
-
-    /**
-     * @param string $message
-     *
-     * @return string
-     */
-    public function parseNonce(string &$message): string
-    {
-        return $this->encryptionAdapter->parseNonce($message);
     }
 
     /**

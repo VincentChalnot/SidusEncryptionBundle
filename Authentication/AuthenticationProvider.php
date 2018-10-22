@@ -1,9 +1,17 @@
 <?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Sidus\EncryptionBundle\Authentication;
 
 use Sidus\EncryptionBundle\Entity\UserEncryptionProviderInterface;
-use Sidus\EncryptionBundle\Encryption\EncryptionManager;
+use Sidus\EncryptionBundle\Registry\EncryptionManagerRegistry;
 use Symfony\Component\Security\Core\Authentication\Provider\DaoAuthenticationProvider;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
@@ -15,15 +23,15 @@ use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
  */
 class AuthenticationProvider extends DaoAuthenticationProvider
 {
-    /** @var EncryptionManager */
-    protected $encryptionManager;
+    /** @var EncryptionManagerRegistry */
+    protected $encryptionManagerRegistry;
 
     /**
-     * @param EncryptionManager $encryptionManager
+     * @param EncryptionManagerRegistry $encryptionManagerRegistry
      */
-    public function setEncryptionManager(EncryptionManager $encryptionManager): void
+    public function setEncryptionManagerRegistry(EncryptionManagerRegistry $encryptionManagerRegistry): void
     {
-        $this->encryptionManager = $encryptionManager;
+        $this->encryptionManagerRegistry = $encryptionManagerRegistry;
     }
 
     /**
@@ -39,7 +47,8 @@ class AuthenticationProvider extends DaoAuthenticationProvider
     {
         $user = parent::retrieveUser($username, $token);
         if ($user instanceof UserEncryptionProviderInterface && null !== $token->getCredentials()) {
-            $this->encryptionManager->decryptCipherKey($user, $token->getCredentials());
+            $encryptionManager = $this->encryptionManagerRegistry->getEncryptionManagerForUser($user);
+            $encryptionManager->decryptCipherKey($user, $token->getCredentials());
         }
 
         return $user;

@@ -1,15 +1,23 @@
 <?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
-namespace Sidus\EncryptionBundle\Encryption;
+namespace Sidus\EncryptionBundle\Manager;
 
+use Sidus\EncryptionBundle\Encryption\EncryptionAdapterInterface;
 use Sidus\EncryptionBundle\Entity\UserEncryptionProviderInterface;
 use Sidus\EncryptionBundle\Exception\EmptyCipherKeyException;
-use Sidus\EncryptionBundle\Exception\EmptyOwnershipIdException;
 
 /**
  * The encryption manager will handle the encryption/decryption of cipher key and data in the whole application
  * The cipher key is encrypted in the user with it's password (clear-text password) which means the cipher key can only
- * be retrieved at user's login. That's why it is passed along in the session (in clear form) This way the cypher-key is
+ * be retrieved at user's login. That's why it is passed along in the session (in clear form) This way the cipher-key is
  * never stored on the server (except in PHP's sessions) which means that the data are safe if the database or the
  * files are stolen. For improved security you can lower PHP's session duration.
  *
@@ -17,6 +25,13 @@ use Sidus\EncryptionBundle\Exception\EmptyOwnershipIdException;
  */
 interface EncryptionManagerInterface
 {
+    /**
+     * Can be used for low-level function access
+     *
+     * @return EncryptionAdapterInterface
+     */
+    public function getEncryptionAdapter(): EncryptionAdapterInterface;
+
     /**
      * Decrypt the cipher key used to encrypt/decrypt data using the user's password and saves it in the session
      *
@@ -138,47 +153,4 @@ interface EncryptionManagerInterface
      * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function decryptStream($inputStream, $outputStream, int $fileSize = null): void;
-
-    /**
-     * Set the current cipher-key used for encryption/decryption
-     *
-     * @param string $cipherKey
-     *
-     * @throws EmptyCipherKeyException
-     */
-    public function setCipherKey(string $cipherKey): void;
-
-    /**
-     * Get the current cipher-key used for encryption/decryption
-     *
-     * @throws EmptyCipherKeyException
-     *
-     * @return string
-     */
-    public function getCipherKey(): string;
-
-    /**
-     * Set the ownership ID in session
-     *
-     * @param mixed $encryptionOwnershipId
-     *
-     * @throws EmptyOwnershipIdException
-     */
-    public function setEncryptionOwnershipId($encryptionOwnershipId): void;
-
-    /**
-     * Returns the ownership ID loaded in session
-     *
-     * @throws EmptyOwnershipIdException
-     *
-     * @return mixed
-     */
-    public function getEncryptionOwnershipId(): string;
-
-    /**
-     * @param string $message
-     *
-     * @return string
-     */
-    public function parseNonce(string &$message): string;
 }

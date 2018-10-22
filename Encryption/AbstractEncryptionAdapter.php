@@ -1,4 +1,12 @@
 <?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Sidus\EncryptionBundle\Encryption;
 
@@ -7,6 +15,8 @@ use Sidus\EncryptionBundle\Exception\RandomGeneratorException;
 
 /**
  * Base features that should be common to all implementations
+ *
+ * @author Vincent Chalnot <vincent@sidus.fr>
  */
 abstract class AbstractEncryptionAdapter implements EncryptionAdapterInterface
 {
@@ -23,6 +33,26 @@ abstract class AbstractEncryptionAdapter implements EncryptionAdapterInterface
 
     /** @var int */
     protected $encryptedBlockSize;
+
+    /**
+     * {@inheritdoc}
+     */
+    public function encryptCipherKey(string $cipherKey, string $key): string
+    {
+        $nonce = $this->generateNonce();
+
+        return $nonce.$this->encrypt($key, $nonce, $key);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function decryptCipherKey(string $encryptedCipherKey, string $key): string
+    {
+        $nonce = $this->parseNonce($encryptedCipherKey);
+
+        return $this->decrypt($encryptedCipherKey, $nonce, $key);
+    }
 
     /**
      * {@inheritdoc}

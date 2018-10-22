@@ -1,0 +1,18 @@
+parameters:
+    security.authentication.provider.dao.class: Sidus\EncryptionBundle\Authentication\AuthenticationProvider
+
+services:
+    ##
+    # Inherit the original Dao Provider from symfony and add the encryption manager
+    # @see symfony/src/Symfony/Bundle/SecurityBundle/Resources/config/security_listeners.xml
+    ##
+    security.authentication.provider.dao:
+        class: Sidus\EncryptionBundle\Authentication\AuthenticationProvider
+        arguments:
+            - ~
+            - '@security.user_checker'
+            - ~
+            - '@security.encoder_factory'
+            - '%security.authentication.hide_user_not_found%'
+        calls:
+            - [setEncryptionManagerRegistry, ['@Sidus\EncryptionBundle\Registry\EncryptionManagerRegistry']]

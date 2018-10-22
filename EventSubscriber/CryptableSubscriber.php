@@ -1,16 +1,25 @@
 <?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Sidus\EncryptionBundle\EventSubscriber;
 
 use Sidus\EncryptionBundle\Entity\CryptableInterface;
 use Sidus\EncryptionBundle\Exception\EmptyOwnershipIdException;
-use Sidus\EncryptionBundle\Encryption\EncryptionManager;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\EventSubscriber;
 use Doctrine\Common\Persistence\Event\LifecycleEventArgs;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Event\OnFlushEventArgs;
 use Psr\Log\LoggerInterface;
+use Sidus\EncryptionBundle\Registry\EncryptionManagerRegistry;
+use Sidus\EncryptionBundle\Session\CipherKeyStorageInterface;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 
 /**
@@ -22,8 +31,11 @@ use Symfony\Component\PropertyAccess\PropertyAccess;
  */
 class CryptableSubscriber implements EventSubscriber
 {
-    /** @var EncryptionManager */
-    protected $encryptionManager;
+    /** @var CipherKeyStorageInterface */
+    protected $cipherKeyStorage;
+
+    /** @var EncryptionManagerRegistry */
+    protected $encryptionManagerRegistry;
 
     /** @var ArrayCollection */
     protected $flushedEntities;
@@ -35,17 +47,20 @@ class CryptableSubscriber implements EventSubscriber
     protected $logger;
 
     /**
-     * @param EncryptionManager    $encryptionManager
-     * @param LoggerInterface|null $logger
+     * @param CipherKeyStorageInterface $cipherKeyStorage
+     * @param EncryptionManagerRegistry $encryptionManagerRegistry
+     * @param LoggerInterface|null      $logger
      */
     public function __construct(
-        EncryptionManager $encryptionManager,
+        CipherKeyStorageInterface $cipherKeyStorage,
+        EncryptionManagerRegistry $encryptionManagerRegistry,
         LoggerInterface $logger = null
     ) {
+        $this->cipherKeyStorage = $cipherKeyStorage;
+        $this->encryptionManagerRegistry = $encryptionManagerRegistry;
+        $this->logger = $logger;
         $this->flushedEntities = new ArrayCollection();
         $this->alreadyDecryptedEntities = new ArrayCollection();
-        $this->encryptionManager = $encryptionManager;
-        $this->logger = $logger;
     }
 
     /**
@@ -143,7 +158,7 @@ class CryptableSubscriber implements EventSubscriber
             return;
         }
         try {
-            $ownershipId = $this->encryptionManager->getEncryptionOwnershipId();
+            $ownershipId = $this->cipherKeyStorage->getEncryptionOwnershipId();
         } catch (EmptyOwnershipIdException $e) {
             $this->logError('Missing ownership ID on entity', $entity, $e);
 
@@ -154,6 +169,7 @@ class CryptableSubscriber implements EventSubscriber
 
             return;
         }
+        $encryptionManager = $this->encryptionManagerRegistry->getEncryptionManagerForEntity($entity);
         $propertyAccessor = PropertyAccess::createPropertyAccessor();
         foreach ($entity->getEncryptedProperties() as $property) {
             $data = base64_decode($propertyAccessor->getValue($entity, $property));
@@ -161,7 +177,7 @@ class CryptableSubscriber implements EventSubscriber
                 $this->logError("Empty data for property {$property}", $entity);
                 continue;
             }
-            $propertyAccessor->setValue($entity, $property, $this->encryptionManager->decryptString($data));
+            $propertyAccessor->setValue($entity, $property, $encryptionManager->decryptString($data));
         }
         $entity->setIsEncrypted(false);
     }
@@ -187,7 +203,7 @@ class CryptableSubscriber implements EventSubscriber
             return false;
         }
         try {
-            $ownershipId = $this->encryptionManager->getEncryptionOwnershipId();
+            $ownershipId = $this->cipherKeyStorage->getEncryptionOwnershipId();
         } catch (EmptyOwnershipIdException $e) {
             $this->logError('Missing ownership ID on entity', $entity, $e);
 
@@ -198,6 +214,8 @@ class CryptableSubscriber implements EventSubscriber
 
             return false;
         }
+        $encryptionManager = $this->encryptionManagerRegistry->getEncryptionManagerForEntity($entity);
+
         $uow = $em->getUnitOfWork();
         $hasChanges = false;
         $propertyAccessor = PropertyAccess::createPropertyAccessor();
@@ -207,7 +225,7 @@ class CryptableSubscriber implements EventSubscriber
                 continue;
             }
             // If Entity was already decrypted, we need to encrypt all properties even if there is no change
-            $newEncryptedValue = $this->encryptionManager->encryptString($value);
+            $newEncryptedValue = $encryptionManager->encryptString($value);
             $propertyAccessor->setValue($entity, $property, base64_encode($newEncryptedValue));
             $hasChanges = true;
         }
@@ -235,7 +253,7 @@ class CryptableSubscriber implements EventSubscriber
         }
         try {
             $context = [
-                'encryptionOwnershipId' => $this->encryptionManager->getEncryptionOwnershipId(),
+                'encryptionOwnershipId' => $this->cipherKeyStorage->getEncryptionOwnershipId(),
             ];
         } catch (EmptyOwnershipIdException $e) {
             $context = [

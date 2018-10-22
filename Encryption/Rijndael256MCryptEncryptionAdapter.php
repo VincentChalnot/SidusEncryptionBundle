@@ -1,4 +1,13 @@
-<?php /** @noinspection CryptographicallySecureAlgorithmsInspection */
+<?php
+/*
+ * This file is part of the Sidus/EncryptionBundle package.
+ *
+ * Copyright (c) 2015-2018 Vincent Chalnot
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+/** @noinspection CryptographicallySecureAlgorithmsInspection */
 
 namespace Sidus\EncryptionBundle\Encryption;
 
@@ -7,11 +16,13 @@ use Sidus\EncryptionBundle\Exception\EncryptionException;
 /**
  * Mcrypt implementation of Rijndael-256, NOT AES-256!
  * http://php.net/manual/en/function.mcrypt-encrypt.php#117667
+ *
+ * @author Vincent Chalnot <vincent@sidus.fr>
  */
 class Rijndael256MCryptEncryptionAdapter extends AbstractEncryptionAdapter
 {
     /**
-     * All size parameters are deducted from cypher mode
+     * All size parameters are deducted from cipher mode
      */
     public function __construct()
     {
@@ -22,6 +33,14 @@ class Rijndael256MCryptEncryptionAdapter extends AbstractEncryptionAdapter
         $this->nonceSize = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC); // 32
         $this->clearTextBlockSize = mcrypt_get_block_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC); // 32
         $this->encryptedBlockSize = $this->clearTextBlockSize;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public static function getCode(): string
+    {
+        return 'mcrypt.rijndael-256';
     }
 
     /**
