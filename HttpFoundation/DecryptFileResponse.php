@@ -39,14 +39,14 @@ class DecryptFileResponse extends BinaryFileResponse
      * the end of the file which can introduce a slight difference in the file size which will break checksum
      * verifications
      *
-     * @param EncryptionManagerInterface  $encryptionManager
-     * @param SplFileInfo|string $file
-     * @param int                $fileSize
-     * @param int                $status
-     * @param array              $headers
-     * @param null|string        $contentDisposition
-     * @param bool               $autoEtag
-     * @param bool               $autoLastModified
+     * @param EncryptionManagerInterface $encryptionManager
+     * @param SplFileInfo|string         $file
+     * @param int                        $fileSize
+     * @param int                        $status
+     * @param array                      $headers
+     * @param null|string                $contentDisposition
+     * @param bool                       $autoEtag
+     * @param bool                       $autoLastModified
      */
     public function __construct(
         EncryptionManagerInterface $encryptionManager,
@@ -73,9 +73,6 @@ class DecryptFileResponse extends BinaryFileResponse
     {
         parent::prepare($request);
         $this->headers->set('Content-Length', $this->fileSize);
-        if (!$this->headers->has('Content-Type')) {
-            $this->headers->set('Content-Type', 'application/octet-stream');
-        }
 
         return $this;
     }
