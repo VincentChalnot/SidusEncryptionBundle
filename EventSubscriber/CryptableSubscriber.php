@@ -172,7 +172,11 @@ class CryptableSubscriber implements EventSubscriber
         $encryptionManager = $this->encryptionManagerRegistry->getEncryptionManagerForEntity($entity);
         $propertyAccessor = PropertyAccess::createPropertyAccessor();
         foreach ($entity->getEncryptedProperties() as $property) {
-            $data = base64_decode($propertyAccessor->getValue($entity, $property));
+            $value = $propertyAccessor->getValue($entity, $property);
+            if (null === $value) {
+                continue;
+            }
+            $data = base64_decode($value);
             if (!$data) {
                 $this->logError("Empty data for property {$property}", $entity);
                 continue;
