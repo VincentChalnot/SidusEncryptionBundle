@@ -41,7 +41,7 @@ abstract class AbstractEncryptionAdapter implements EncryptionAdapterInterface
     {
         $nonce = $this->generateNonce();
 
-        return $nonce.$this->encrypt($key, $nonce, $key);
+        return $nonce.$this->encrypt($cipherKey, $nonce, $key);
     }
 
     /**
