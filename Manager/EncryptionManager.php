@@ -134,7 +134,7 @@ class EncryptionManager implements EncryptionManagerInterface
         );
         $this->stopWatch(__METHOD__);
 
-        return $decrypted;
+        return rtrim($decrypted, "\0");
     }
 
     /**
