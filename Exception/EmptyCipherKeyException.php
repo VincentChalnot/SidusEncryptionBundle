@@ -15,6 +15,6 @@ namespace Sidus\EncryptionBundle\Exception;
  *
  * @author Vincent Chalnot <vincent@sidus.fr>
  */
-class EmptyCipherKeyException extends \RuntimeException
+class EmptyCipherKeyException extends \RuntimeException implements EncryptionExceptionInterface
 {
 }

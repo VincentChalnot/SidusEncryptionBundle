@@ -11,10 +11,8 @@
 namespace Sidus\EncryptionBundle\Exception;
 
 /**
- * Thrown when there is no ownership id available to decrypt data
- *
- * @author Vincent Chalnot <vincent@sidus.fr>
+ * All dedicated exceptions are tagged with this interface
  */
-class EmptyOwnershipIdException extends \RuntimeException implements EncryptionExceptionInterface
+interface EncryptionExceptionInterface
 {
 }

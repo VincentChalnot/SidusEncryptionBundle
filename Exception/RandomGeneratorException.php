@@ -15,6 +15,6 @@ namespace Sidus\EncryptionBundle\Exception;
  *
  * @author Vincent Chalnot <vincent@sidus.fr>
  */
-class RandomGeneratorException extends \RuntimeException
+class RandomGeneratorException extends \RuntimeException implements EncryptionExceptionInterface
 {
 }

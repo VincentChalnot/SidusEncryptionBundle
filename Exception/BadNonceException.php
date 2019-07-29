@@ -15,6 +15,6 @@ namespace Sidus\EncryptionBundle\Exception;
  *
  * @author Vincent Chalnot <vincent@sidus.fr>
  */
-class BadNonceException extends \RuntimeException
+class BadNonceException extends \RuntimeException implements EncryptionExceptionInterface
 {
 }

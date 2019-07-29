@@ -11,10 +11,10 @@
 namespace Sidus\EncryptionBundle\Exception;
 
 /**
- * Can occure when the encrypted data end unexpectedly
+ * Can occurs when the encrypted data end unexpectedly
  *
  * @author Vincent Chalnot <vincent@sidus.fr>
  */
-class EndOfStreamException extends \RuntimeException
+class EndOfStreamException extends \RuntimeException implements EncryptionExceptionInterface
 {
 }

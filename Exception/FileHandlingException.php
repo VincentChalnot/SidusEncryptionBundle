@@ -15,6 +15,6 @@ namespace Sidus\EncryptionBundle\Exception;
  *
  * @author Vincent Chalnot <vincent@sidus.fr>
  */
-class FileHandlingException extends \RuntimeException
+class FileHandlingException extends \RuntimeException implements EncryptionExceptionInterface
 {
 }
