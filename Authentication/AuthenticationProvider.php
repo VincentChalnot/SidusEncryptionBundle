@@ -11,9 +11,11 @@
 namespace Sidus\EncryptionBundle\Authentication;
 
 use Sidus\EncryptionBundle\Entity\UserEncryptionProviderInterface;
+use Sidus\EncryptionBundle\Exception\EncryptionException;
 use Sidus\EncryptionBundle\Registry\EncryptionManagerRegistry;
 use Symfony\Component\Security\Core\Authentication\Provider\DaoAuthenticationProvider;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
+use Symfony\Component\Security\Core\Exception\BadCredentialsException;
 
 /**
  * The Authentication provider will be used at connection time to decrypt the cipher key in the user and store it in
@@ -48,7 +50,12 @@ class AuthenticationProvider extends DaoAuthenticationProvider
         $user = parent::retrieveUser($username, $token);
         if ($user instanceof UserEncryptionProviderInterface && null !== $token->getCredentials()) {
             $encryptionManager = $this->encryptionManagerRegistry->getEncryptionManagerForUser($user);
-            $encryptionManager->decryptCipherKey($user, $token->getCredentials());
+            try {
+                $encryptionManager->decryptCipherKey($user, $token->getCredentials());
+            } catch (EncryptionException $e) {
+                throw new BadCredentialsException('Bad credentials.', 0, $e);
+                $e->setUsername($username);
+            }
         }
 
         return $user;
