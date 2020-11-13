@@ -1,0 +1,6 @@
+services:
+    Sidus\EncryptionBundle\Registry\EncryptionManagerRegistry:
+        public: false
+        arguments:
+            $defaultManager: ~
+            $managers: !tagged {tag: sidus.encryption.manager, default_index_method: getCode}

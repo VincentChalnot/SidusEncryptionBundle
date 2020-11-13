@@ -22,7 +22,14 @@
     "require": {
         "php": "^7.4",
         "ext-mbstring": "*",
-        "symfony/framework-bundle": "^4.4|^5.1"
+        "symfony/framework-bundle": "^4.4|^5.1",
+        "doctrine/doctrine-bundle": "*",
+        "doctrine/orm": "*",
+        "symfony/stopwatch": "^4.4|^5.1",
+        "symfony/security":"^4.4|^5.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.4"
     },
     "suggest": {
         "doctrine/doctrine-bundle": "Use Doctrine to encrypt and decrypt entities automatically",
@@ -33,10 +40,18 @@
     },
     "autoload": {
         "psr-4": {
-            "Sidus\\EncryptionBundle\\": ""
+            "Sidus\\EncryptionBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Sidus\\EncryptionBundle\\Tests\\": "tests/"
         }
     },
     "conflict": {
         "sidus/encryption-bundle": "*"
+    },
+    "config": {
+        "bin-dir": "bin"
     }
 }

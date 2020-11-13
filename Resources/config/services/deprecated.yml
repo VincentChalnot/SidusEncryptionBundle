@@ -1,8 +1,0 @@
-services:
-    sidus.encryption.session.cipher_key_storage:
-        alias: Sidus\EncryptionBundle\Session\CipherKeyStorageInterface
-        public: true
-
-    sidus.encryption.registry.manager:
-        alias: Sidus\EncryptionBundle\Registry\EncryptionManagerRegistry
-        public: true
