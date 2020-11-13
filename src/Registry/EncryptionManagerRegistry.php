@@ -13,18 +13,19 @@ use Sidus\EncryptionBundle\Manager\EncryptionManagerInterface;
  */
 class EncryptionManagerRegistry
 {
-    /** @var EncryptionManagerInterface[] */
-    protected $encryptionManagers = [];
-
-    /** @var string */
-    protected $preferredEncryptionManager;
-
+    private array $managers;
+    private string $defaultCode;
+    
     /**
-     * @param string $preferredEncryptionManager
+     * EncryptionManagerRegistry constructor.
+     *
+     * @param string   $defaultCode
+     * @param iterable|\Traversable $managers
      */
-    public function __construct(string $preferredEncryptionManager)
+    public function __construct(string $defaultCode, iterable $managers)
     {
-        $this->preferredEncryptionManager = $preferredEncryptionManager;
+        $this->managers = iterator_to_array($managers);
+        $this->defaultCode = $defaultCode;
     }
 
     /**
@@ -32,16 +33,7 @@ class EncryptionManagerRegistry
      */
     public function getEncryptionManagers(): array
     {
-        return $this->encryptionManagers;
-    }
-
-    /**
-     * @param string                     $code
-     * @param EncryptionManagerInterface $encryptionManager
-     */
-    public function addEncryptionManager(string $code, EncryptionManagerInterface $encryptionManager): void
-    {
-        $this->encryptionManagers[$code] = $encryptionManager;
+        return $this->managers;
     }
 
     /**
@@ -77,24 +69,16 @@ class EncryptionManagerRegistry
             throw new \UnexpectedValueException("Missing encryption manager {$code}");
         }
 
-        return $this->encryptionManagers[$code];
+        return $this->managers[$code];
     }
 
-    /**
-     * @param string $code
-     *
-     * @return bool
-     */
     public function hasEncryptionManager(string $code): bool
     {
-        return array_key_exists($code, $this->encryptionManagers);
+        return array_key_exists($code, $this->managers);
     }
-
-    /**
-     * @return EncryptionManagerInterface
-     */
-    public function getPreferredEncryptionManager(): EncryptionManagerInterface
+    
+    public function getDefaultEncryptionManager(): EncryptionManagerInterface
     {
-        return $this->getEncryptionManager($this->preferredEncryptionManager);
+        return $this->getEncryptionManager($this->defaultCode);
     }
 }

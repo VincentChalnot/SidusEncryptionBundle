@@ -25,11 +25,6 @@ use Symfony\Component\DependencyInjection\Loader;
  */
 class SidusEncryptionExtension extends Extension
 {
-    /**
-     * {@inheritdoc}
-     *
-     * @throws \Exception
-     */
     public function load(array $configs, ContainerBuilder $container): void
     {
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config/services'));
@@ -38,12 +33,12 @@ class SidusEncryptionExtension extends Extension
         $loader->load('registry.yml');
         $loader->load('security.yml');
         $loader->load('session.yml');
-        $loader->load('deprecated.yml'); // Remove me in a future version
 
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
         $registry = $container->getDefinition(EncryptionManagerRegistry::class);
-        $registry->replaceArgument(0, $config['preferred_adapter']);
+        $registry->replaceArgument('$defaultCode', $config['preferred_adapter']);
+        $container->setParameter('sidus.encryption.throw_exceptions', $config['throw_exceptions']);
     }
 }

@@ -25,8 +25,7 @@ use Symfony\Component\Security\Core\Exception\BadCredentialsException;
  */
 class AuthenticationProvider extends DaoAuthenticationProvider
 {
-    /** @var EncryptionManagerRegistry */
-    protected $encryptionManagerRegistry;
+    protected EncryptionManagerRegistry $encryptionManagerRegistry;
 
     /**
      * @param EncryptionManagerRegistry $encryptionManagerRegistry
@@ -54,7 +53,6 @@ class AuthenticationProvider extends DaoAuthenticationProvider
                 $encryptionManager->decryptCipherKey($user, $token->getCredentials());
             } catch (EncryptionException $e) {
                 throw new BadCredentialsException('Bad credentials.', 0, $e);
-                $e->setUsername($username);
             }
         }
 

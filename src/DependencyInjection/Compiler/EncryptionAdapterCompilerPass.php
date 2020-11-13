@@ -16,9 +16,7 @@ use Sidus\EncryptionBundle\Registry\EncryptionManagerRegistry;
 use Sidus\EncryptionBundle\Session\CipherKeyStorageInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
-use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Reference;
 
 /**
@@ -28,18 +26,11 @@ use Symfony\Component\DependencyInjection\Reference;
  */
 class EncryptionAdapterCompilerPass implements CompilerPassInterface
 {
-    /**
-     * @param ContainerBuilder $container
-     *
-     * @throws InvalidArgumentException
-     */
     public function process(ContainerBuilder $container): void
     {
         if (!$container->has(EncryptionManagerRegistry::class)) {
             return;
         }
-
-        $registryDefinition = $container->findDefinition(EncryptionManagerRegistry::class);
 
         foreach ($container->findTaggedServiceIds('sidus.encryption.adapter') as $adapterId => $tags) {
             $adapterDefinition = $container->getDefinition($adapterId);
@@ -50,20 +41,12 @@ class EncryptionAdapterCompilerPass implements CompilerPassInterface
                 [
                     new Reference($adapterId),
                     new Reference(CipherKeyStorageInterface::class),
-                    new Reference('debug.stopwatch', ContainerInterface::NULL_ON_INVALID_REFERENCE),
+                    $container->getParameter('sidus.encryption.throw_exceptions'),
                 ]
             );
-            $adapterCode = $class::getCode();
+            $managerDefinition->addTag('sidus.encryption.manager');
             $managerId = 'sidus.encryption.manager.'.$class;
             $container->setDefinition($managerId, $managerDefinition);
-
-            $registryDefinition->addMethodCall(
-                'addEncryptionManager',
-                [
-                    $adapterCode,
-                    new Reference($managerId),
-                ]
-            );
         }
     }
 }

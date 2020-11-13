@@ -31,15 +31,15 @@ interface EncryptionManagerInterface
      * @return EncryptionAdapterInterface
      */
     public function getEncryptionAdapter(): EncryptionAdapterInterface;
-
+    
     /**
      * Decrypt the cipher key used to encrypt/decrypt data using the user's password and saves it in the session
      *
      * @param UserEncryptionProviderInterface $user
      * @param string                          $plainTextPassword
      */
-    public function decryptCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword): void;
-
+    public function decryptCipherKey(UserEncryptionProviderInterface $user, string $plainTextPassword): void;
+    
     /**
      * Encrypt enterprise cipher key for a user
      * Used at user creation and password change
@@ -48,8 +48,8 @@ interface EncryptionManagerInterface
      * @param UserEncryptionProviderInterface $user
      * @param string                          $plainTextPassword
      */
-    public function encryptCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword): void;
-
+    public function encryptCipherKey(UserEncryptionProviderInterface $user, string $plainTextPassword): void;
+    
     /**
      * Create a new cipher key for a user
      *
@@ -58,57 +58,57 @@ interface EncryptionManagerInterface
      *
      * @throws EmptyCipherKeyException
      */
-    public function createCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword): void;
-
+    public function createCipherKey(UserEncryptionProviderInterface $user, string $plainTextPassword): void;
+    
     /**
      * Encrypt a string and automatically generate the nonce if needed
      *
-     * @param string $string
-     * @param string $nonce
-     *
-     * @throws EmptyCipherKeyException
+     * @param string      $string
+     * @param string|null $nonce
      *
      * @return string
+     * @throws EmptyCipherKeyException
+     *
      */
     public function encryptString(string $string, string $nonce = null): string;
-
+    
     /**
      * Decrypt an encrypted string, try to parse the nonce if not specified
      * Absolutely NOT safe for binary data
      *
-     * @param string $encryptedString
-     * @param string $nonce
-     *
-     * @throws EmptyCipherKeyException
+     * @param string      $encryptedString
+     * @param string|null $nonce
      *
      * @return string
+     * @throws EmptyCipherKeyException
+     *
      */
     public function decryptString(string $encryptedString, string $nonce = null): string;
-
+    
     /**
      * Encrypt a block of data from the input stream
      *
      * @param resource $inputStream
      * @param string   $nonce
      *
+     * @return string
      * @throws EmptyCipherKeyException
      *
-     * @return string
      */
     public function encryptStreamBlock($inputStream, string $nonce): string;
-
+    
     /**
      * Decrypt a block of the input stream
      *
      * @param resource $inputStream
      * @param string   $nonce
      *
+     * @return string
      * @throws EmptyCipherKeyException
      *
-     * @return string
      */
     public function decryptStreamBlock($inputStream, string $nonce): string;
-
+    
     /**
      * Encrypt a whole file by streaming each block from the input file to the output
      *
@@ -119,7 +119,7 @@ interface EncryptionManagerInterface
      * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function encryptFile(string $inputFilePath, string $outputFilePath): void;
-
+    
     /**
      * @param resource $inputStream
      * @param resource $outputStream
@@ -128,26 +128,26 @@ interface EncryptionManagerInterface
      * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function encryptStream($inputStream, $outputStream): void;
-
+    
     /**
      * Decrypt a file by streaming each block from the input to the output
      *
-     * @param string $inputFilePath
-     * @param string $outputFilePath
-     * @param int    $fileSize
+     * @param string   $inputFilePath
+     * @param string   $outputFilePath
+     * @param int|null $fileSize
      *
      * @throws EmptyCipherKeyException
      * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
      */
     public function decryptFile(string $inputFilePath, string $outputFilePath, int $fileSize = null): void;
-
+    
     /**
      * Decrypt a stream
      * You can specify the original unencrypted file size in order to cut the output at the exact same location
      *
      * @param resource $inputStream
      * @param resource $outputStream
-     * @param int      $fileSize
+     * @param int|null $fileSize
      *
      * @throws EmptyCipherKeyException
      * @throws \Sidus\EncryptionBundle\Exception\FileHandlingException
