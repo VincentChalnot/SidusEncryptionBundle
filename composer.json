@@ -1,5 +1,5 @@
 {
-    "name": "sidus/encryption-bundle",
+    "name": "cleverage/encryption-bundle",
     "description": "The EncryptionBundle allows you to store encrypted files and data in Doctrine's entity in a very simple way",
     "keywords": [
         "encryption",
@@ -35,5 +35,8 @@
         "psr-4": {
             "Sidus\\EncryptionBundle\\": ""
         }
+    },
+    "conflict": {
+        "sidus/encryption-bundle": "*"
     }
 }
