@@ -10,13 +10,13 @@
 
 namespace Sidus\EncryptionBundle\Manager;
 
+use Exception;
 use Sidus\EncryptionBundle\Encryption\EncryptionAdapterInterface;
 use Sidus\EncryptionBundle\Entity\UserEncryptionProviderInterface;
 use Sidus\EncryptionBundle\Exception\EmptyCipherKeyException;
 use Sidus\EncryptionBundle\Exception\EncryptionException;
 use Sidus\EncryptionBundle\Exception\FileHandlingException;
 use Sidus\EncryptionBundle\Session\CipherKeyStorageInterface;
-use Symfony\Component\Stopwatch\Stopwatch;
 
 /**
  * {@inheritdoc}
@@ -26,28 +26,18 @@ use Symfony\Component\Stopwatch\Stopwatch;
  */
 class EncryptionManager implements EncryptionManagerInterface
 {
-    /** @var EncryptionAdapterInterface */
-    protected $encryptionAdapter;
-
-    /** @var CipherKeyStorageInterface */
-    protected $cipherKeyStorage;
-
-    /** @var Stopwatch|null */
-    protected $stopwatch;
-
-    /**
-     * @param EncryptionAdapterInterface $encryptionAdapter
-     * @param CipherKeyStorageInterface  $cipherKeyStorage
-     * @param Stopwatch|null             $stopwatch
-     */
+    protected EncryptionAdapterInterface $encryptionAdapter;
+    protected CipherKeyStorageInterface $cipherKeyStorage;
+    protected bool $throwExceptions;
+    
     public function __construct(
         EncryptionAdapterInterface $encryptionAdapter,
         CipherKeyStorageInterface $cipherKeyStorage,
-        Stopwatch $stopwatch = null
+        bool $throwExceptions = true
     ) {
         $this->encryptionAdapter = $encryptionAdapter;
         $this->cipherKeyStorage = $cipherKeyStorage;
-        $this->stopwatch = $stopwatch;
+        $this->throwExceptions = $throwExceptions;
     }
 
     /**
@@ -61,7 +51,7 @@ class EncryptionManager implements EncryptionManagerInterface
     /**
      * {@inheritdoc}
      */
-    public function decryptCipherKey(UserEncryptionProviderInterface $user, $plainTextPassword): void
+    public function decryptCipherKey(UserEncryptionProviderInterface $user, string $plainTextPassword): void
     {
         if (!trim($plainTextPassword)) {
             throw new \InvalidArgumentException('Password cannot be empty');
@@ -108,12 +98,19 @@ class EncryptionManager implements EncryptionManagerInterface
      */
     public function encryptString(string $string, string $nonce = null): string
     {
-        $this->startWatch(__METHOD__);
         if (null === $nonce) {
             $nonce = $this->encryptionAdapter->generateNonce();
         }
-        $encrypted = $this->encryptionAdapter->encrypt($string, $nonce, $this->cipherKeyStorage->getCipherKey());
-        $this->stopWatch(__METHOD__);
+    
+        try {
+            $encrypted = $this->encryptionAdapter->encrypt($string, $nonce, $this->cipherKeyStorage->getCipherKey());
+        } catch (Exception $exception) {
+            if ($this->throwExceptions) {
+                throw $exception;
+            }
+    
+            return '';
+        }
 
         return $nonce.$encrypted;
     }
@@ -123,16 +120,23 @@ class EncryptionManager implements EncryptionManagerInterface
      */
     public function decryptString(string $encryptedString, string $nonce = null): string
     {
-        $this->startWatch(__METHOD__);
-        if (null === $nonce) {
+        if ($nonce === null) {
             $nonce = $this->encryptionAdapter->parseNonce($encryptedString);
         }
-        $decrypted = $this->encryptionAdapter->decrypt(
-            $encryptedString,
-            $nonce,
-            $this->cipherKeyStorage->getCipherKey()
-        );
-        $this->stopWatch(__METHOD__);
+    
+        try {
+            $decrypted = $this->encryptionAdapter->decrypt(
+                $encryptedString,
+                $nonce,
+                $this->cipherKeyStorage->getCipherKey()
+            );
+        } catch (Exception $exception) {
+            if ($this->throwExceptions) {
+                throw $exception;
+            }
+    
+            return '';
+        }
 
         return rtrim($decrypted, "\0");
     }
@@ -168,9 +172,8 @@ class EncryptionManager implements EncryptionManagerInterface
      */
     public function encryptFile(string $inputFilePath, string $outputFilePath): void
     {
-        $this->startWatch(__METHOD__);
-
         $inputStream = fopen($inputFilePath, 'rb');
+        
         if (!$inputStream) {
             throw new FileHandlingException("Unable to open file '{$inputFilePath}' in read mode (binary)");
         }
@@ -185,11 +188,10 @@ class EncryptionManager implements EncryptionManagerInterface
         if (!fclose($inputStream)) {
             throw new FileHandlingException("Unable to close stream for file {$inputFilePath}");
         }
+        
         if (!fclose($outputStream)) {
             throw new FileHandlingException("Unable to close stream for file {$outputStream}");
         }
-
-        $this->stopWatch(__METHOD__);
     }
 
     /**
@@ -197,9 +199,8 @@ class EncryptionManager implements EncryptionManagerInterface
      */
     public function decryptFile(string $inputFilePath, string $outputFilePath, int $fileSize = null): void
     {
-        $this->startWatch(__METHOD__);
-
         $inputStream = fopen($inputFilePath, 'rb');
+        
         if (!$inputStream) {
             throw new FileHandlingException("Unable to open file '{$inputFilePath}' in read mode (binary)");
         }
@@ -217,8 +218,6 @@ class EncryptionManager implements EncryptionManagerInterface
         if (!fclose($outputStream)) {
             throw new FileHandlingException("Unable to close stream for file {$outputStream}");
         }
-
-        $this->stopWatch(__METHOD__);
     }
 
     /**
@@ -226,8 +225,6 @@ class EncryptionManager implements EncryptionManagerInterface
      */
     public function encryptStream($inputStream, $outputStream): void
     {
-        $this->startWatch(__METHOD__);
-
         $nonce = $this->encryptionAdapter->generateNonce();
         if (false === fwrite($outputStream, $nonce)) {
             throw new FileHandlingException('Unable to write to output stream');
@@ -239,8 +236,6 @@ class EncryptionManager implements EncryptionManagerInterface
                 throw new FileHandlingException('Unable to write to output stream');
             }
         }
-
-        $this->stopWatch(__METHOD__);
     }
 
     /**
@@ -248,8 +243,6 @@ class EncryptionManager implements EncryptionManagerInterface
      */
     public function decryptStream($inputStream, $outputStream, int $fileSize = null): void
     {
-        $this->startWatch(__METHOD__);
-
         $nonce = fread($inputStream, $this->encryptionAdapter->getNonceSize());
 
         if (false === $nonce) {
@@ -269,29 +262,6 @@ class EncryptionManager implements EncryptionManagerInterface
             if (false === $writeSucceeded) {
                 throw new FileHandlingException('Unable to write to output stream');
             }
-        }
-
-        $this->stopWatch(__METHOD__);
-    }
-
-    /**
-     * @param string $name
-     * @param string $category
-     */
-    protected function startWatch($name, $category = null): void
-    {
-        if ($this->stopwatch) {
-            $this->stopwatch->start($name, $category);
-        }
-    }
-
-    /**
-     * @param string $name
-     */
-    protected function stopWatch($name): void
-    {
-        if ($this->stopwatch) {
-            $this->stopwatch->stop($name);
         }
     }
 }

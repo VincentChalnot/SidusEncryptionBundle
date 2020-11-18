@@ -23,30 +23,17 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
  */
 class Configuration implements ConfigurationInterface
 {
-    protected $root;
-
-    /**
-     * @param string $root
-     */
-    public function __construct($root = 'sidus_encryption')
-    {
-        $this->root = $root;
-    }
-
-    /**
-     * {@inheritdoc}
-     * @throws \RuntimeException
-     * @throws \InvalidArgumentException
-     */
     public function getConfigTreeBuilder(): TreeBuilder
     {
-        $treeBuilder = new TreeBuilder();
-        $rootNode = $treeBuilder->root($this->root);
+        $treeBuilder = new TreeBuilder('sidus_encryption');
+        $rootNode = $treeBuilder->getRootNode();
 
         $rootNode
             ->children()
-            ->scalarNode('preferred_adapter')->isRequired()->end()
-            ->end();
+                ->scalarNode('preferred_adapter')->isRequired()->end()
+                ->booleanNode('throw_exception')->defaultTrue()->end()
+            ->end()
+        ;
 
         return $treeBuilder;
     }

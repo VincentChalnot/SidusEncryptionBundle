@@ -24,13 +24,8 @@ class CipherKeyStorage implements CipherKeyStorageInterface
     protected const SESSION_CIPHER_KEY = 'sidus.encryption.cipherkey';
     protected const SESSION_OWNERSHIP_KEY = 'sidus.encryption.ownership';
 
-    /** @var Session */
-    protected $session;
-
-    /** @var string */
-    protected $cipherKey;
-
-    /** @var mixed */
+    protected Session $session;
+    protected string $cipherKey;
     protected $encryptionOwnershipId;
 
     /**
