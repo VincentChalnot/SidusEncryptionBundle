@@ -24,15 +24,10 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class DecryptFileResponse extends BinaryFileResponse
 {
-    /** @var int */
-    protected $fileSize;
-
-    /** @var EncryptionManagerInterface */
-    protected $encryptionManager;
-
-    /** @var UserEncryptionProviderInterface */
-    protected $user;
-
+    protected int $fileSize;
+    protected EncryptionManagerInterface $encryptionManager;
+    protected UserEncryptionProviderInterface $user;
+    
     /**
      * Initialize the response with the file path and the original's file size
      * The original file's size is very important to prevent the null character padding of the encryption function at
@@ -51,12 +46,12 @@ class DecryptFileResponse extends BinaryFileResponse
     public function __construct(
         EncryptionManagerInterface $encryptionManager,
         $file,
-        $fileSize,
-        $status = 200,
-        $headers = [],
-        $contentDisposition = null,
-        $autoEtag = false,
-        $autoLastModified = true
+        int $fileSize,
+        int $status = 200,
+        array $headers = [],
+        ?string $contentDisposition = null,
+        bool $autoEtag = false,
+        bool $autoLastModified = true
     ) {
         parent::__construct($file, $status, $headers, false, $contentDisposition, $autoEtag, $autoLastModified);
         $this->setPrivate();

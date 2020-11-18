@@ -25,14 +25,13 @@
         "symfony/framework-bundle": "^4.4|^5.1",
         "doctrine/doctrine-bundle": "*",
         "doctrine/orm": "*",
-        "symfony/stopwatch": "^4.4|^5.1",
         "symfony/security":"^4.4|^5.1"
     },
     "require-dev": {
+        "symfony/stopwatch": "^4.4|^5.1",
         "phpunit/phpunit": "^9.4"
     },
     "suggest": {
-        "doctrine/doctrine-bundle": "Use Doctrine to encrypt and decrypt entities automatically",
         "ext-sodium": "The Sodium library is native in PHP 7.2",
         "ext-mcrypt": "Don't use this except for backward compatibility purpose",
         "paragonie/sodium_compat": "Use this for a Sodium polyfill",

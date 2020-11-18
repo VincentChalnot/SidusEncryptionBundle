@@ -22,17 +22,10 @@ abstract class AbstractEncryptionAdapter implements EncryptionAdapterInterface
 {
     protected const ENCODING = '8bit';
 
-    /** @var int */
-    protected $nonceSize;
-
-    /** @var int */
-    protected $keySize;
-
-    /** @var int */
-    protected $clearTextBlockSize;
-
-    /** @var int */
-    protected $encryptedBlockSize;
+    protected int $nonceSize;
+    protected int $keySize;
+    protected int $clearTextBlockSize;
+    protected int $encryptedBlockSize;
 
     /**
      * {@inheritdoc}

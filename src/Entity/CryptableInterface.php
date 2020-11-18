@@ -39,13 +39,13 @@ interface CryptableInterface
      * @return bool
      */
     public function getIsEncrypted(): bool;
-
+    
     /**
      * Set the encryption state of the entity
      *
      * @param bool $bool
      */
-    public function setIsEncrypted($bool): void;
+    public function setIsEncrypted(bool $bool): void;
 
     /**
      * Identifies a cipher key to encrypt/decrypt only related entities
